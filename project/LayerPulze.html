@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LayerPulze — Customer App</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="styles/app.css">
+<link rel="stylesheet" href="styles/user-intel.css">
+<link rel="stylesheet" href="styles/cost-attribution.css">
+<link rel="stylesheet" href="styles/schema-moat.css">
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="Icons.jsx"></script>
+<script type="text/babel" src="Data.jsx"></script>
+<script type="text/babel" src="Data2.jsx"></script>
+<script type="text/babel" src="Data3.jsx"></script>
+<script type="text/babel" src="Data4.jsx"></script>
+<script type="text/babel" src="Components.jsx"></script>
+<script type="text/babel" src="Overview.jsx"></script>
+<script type="text/babel" src="Workspaces.jsx"></script>
+<script type="text/babel" src="ModelTabs.jsx"></script>
+<script type="text/babel" src="Model.jsx"></script>
+<script type="text/babel" src="Pages.jsx"></script>
+<script type="text/babel" src="CostAttribution.jsx"></script>
+<script type="text/babel" src="NewPages.jsx"></script>
+<script type="text/babel" src="UserIntel.jsx"></script>
+<script type="text/babel" src="UserIntel2.jsx"></script>
+<script type="text/babel" src="Data5.jsx"></script>
+<script type="text/babel" src="Licenses.jsx"></script>
+<script type="text/babel" src="ReportsApps.jsx"></script>
+<script type="text/babel" src="SchemaMoat.jsx"></script>
+
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "light",
+  "density": "comfortable",
+  "accent": "sky"
+}/*EDITMODE-END*/;
+
+function App() {
+  // Route forms:
+  //   "overview" | "workspaces" | "capacity" | "costs" | "alerts" | "settings"
+  //   "workspaces/<wsId>"
+  //   "workspaces/<wsId>/<modelId>"
+  const [route, setRoute] = React.useState('overview');
+  const [issue, setIssue]   = React.useState(null);
+  const [tweaks, setTweaks] = React.useState(TWEAK_DEFAULTS);
+  const [tweaksOpen, setTweaksOpen] = React.useState(false);
+
+  // Apply theme/density to the html element
+  React.useEffect(() => {
+    document.documentElement.classList.toggle('dark', tweaks.theme === 'dark');
+    document.documentElement.dataset.density = tweaks.density;
+    const accents = {
+      sky:     'oklch(0.69 0.17 237)',
+      violet:  'oklch(0.62 0.16 275)',
+      emerald: 'oklch(0.58 0.15 150)',
+    };
+    document.documentElement.style.setProperty('--primary', accents[tweaks.accent] || accents.sky);
+    document.documentElement.style.setProperty('--accent',  accents[tweaks.accent] || accents.sky);
+    document.documentElement.style.setProperty('--ring',    accents[tweaks.accent] || accents.sky);
+  }, [tweaks]);
+
+  const setTweak = (patch) => {
+    setTweaks(s => {
+      const next = { ...s, ...patch };
+      try {
+        window.parent.postMessage({ type: '__edit_mode_set_keys', edits: patch }, '*');
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  // Edit-mode protocol
+  React.useEffect(() => {
+    const handler = (ev) => {
+      if (!ev.data || typeof ev.data !== 'object') return;
+      if (ev.data.type === '__activate_edit_mode')   setTweaksOpen(true);
+      if (ev.data.type === '__deactivate_edit_mode') setTweaksOpen(false);
+    };
+    window.addEventListener('message', handler);
+    try { window.parent.postMessage({ type: '__edit_mode_available' }, '*'); } catch (e) {}
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  // ── Route parsing ────────────────────────
+  const parts = route.split('/');
+  const top = parts[0];
+  const wsId = parts[1];
+  const modelId = parts[2];
+
+  // Breadcrumbs
+  const crumbs = (() => {
+    const base = [];
+    if (top === 'overview')   return [{ label: 'Environment Overview' }];
+    if (top === 'capacity')   return [{ label: 'Capacity' }];
+    if (top === 'costs')      return [{ label: 'Cost & Usage' }];
+    if (top === 'alerts')     return [{ label: 'Alerts' }];
+    if (top === 'settings')   return [{ label: 'Settings' }];
+    if (top === 'documents')  return [{ label: 'Documents' }];
+    if (top === 'governance') return [{ label: 'Governance' }];
+    if (top === 'activity')   return [{ label: 'Activity' }];
+    if (top === 'users') {
+      const base2 = [{ label: 'Users', go: parts[1] ? () => setRoute('users') : undefined }];
+      if (parts[1]) {
+        const u = DATA.users.top.find(x => x.id === parts[1]);
+        base2.push({ label: u ? u.name : parts[1] });
+      }
+      return base2;
+    }
+    if (top === 'adoption')   return [{ label: 'Adoption' }];
+    if (top === 'sleepers')   return [{ label: 'Sleepers' }];
+    if (top === 'audit')      return [{ label: 'Audit & Compliance' }];
+    if (top === 'licenses')   return [{ label: 'Licenses' }];
+    if (top === 'reports')    return [{ label: 'Reports & Apps' }];
+    if (top === 'lineage')    return [{ label: 'Lineage Explorer' }];
+    if (top === 'access')     return [{ label: 'Access' }];
+    if (top === 'workspaces') {
+      base.push({ label: 'Workspaces', go: wsId ? () => setRoute('workspaces') : undefined });
+      if (wsId) {
+        const ws = DATA.workspaces.items.find(w => w.id === wsId);
+        base.push({ label: ws ? ws.name : wsId, go: modelId ? () => setRoute('workspaces/' + wsId) : undefined });
+      }
+      if (modelId) {
+        const m = DATA.model[modelId];
+        base.push({ label: m ? m.name : modelId });
+      }
+      return base;
+    }
+    return [{ label: top }];
+  })();
+
+  // ── Page ─────────────────────────────────
+  let page;
+  if (top === 'overview')       page = <Overview onOpenIssue={setIssue} onGoWorkspace={(id) => setRoute(id ? 'workspaces/' + id : 'workspaces')}/>;
+  else if (top === 'capacity')  page = <Capacity/>;
+  else if (top === 'costs')     page = <Costs/>;
+  else if (top === 'alerts')    page = <Alerts/>;
+  else if (top === 'settings')  page = <Settings/>;
+  else if (top === 'documents')  page = <Documents/>;
+  else if (top === 'governance') page = <Governance/>;
+  else if (top === 'activity')   page = <Activity/>;
+  else if (top === 'adoption')   page = <Adoption/>;
+  else if (top === 'sleepers')   page = <Sleepers/>;
+  else if (top === 'audit')      page = <Audit/>;
+  else if (top === 'licenses')   page = <Licenses/>;
+  else if (top === 'reports')    page = <ReportsApps/>;
+  else if (top === 'lineage')    page = <LineageExplorer/>;
+  else if (top === 'access')     page = <Access/>;
+  else if (top === 'users') {
+    if (parts[1]) page = <UserDetail userId={parts[1]} onBack={() => setRoute('users')}/>;
+    else          page = <Users onOpenUser={(id) => setRoute('users/' + id)}/>;
+  }
+  else if (top === 'workspaces') {
+    if (modelId)   page = <ModelView wsId={wsId} modelId={modelId} onBack={() => setRoute('workspaces/' + wsId)}/>;
+    else if (wsId) page = <WorkspaceDetail wsId={wsId} onBack={() => setRoute('workspaces')} onOpenModel={(ws, m) => setRoute('workspaces/' + ws + '/' + m)}/>;
+    else           page = <Workspaces onOpen={(id) => setRoute('workspaces/' + id)}/>;
+  }
+
+  const screenLabel = 'customer · ' + route.replace(/\//g, ' › ');
+
+  return (
+    <div className="lp-app" data-screen-label={screenLabel}>
+      <Sidebar route={route} setRoute={setRoute}/>
+      <main className="lp-main">
+        <Topbar
+          crumbs={crumbs}
+          tenant={DATA.tenant.env}
+          theme={tweaks.theme}
+          onTheme={() => setTweak({ theme: tweaks.theme === 'dark' ? 'light' : 'dark' })}
+          onTweaks={() => setTweaksOpen(o => !o)}
+        />
+        <div className="lp-scroll">
+          <div className="lp-content" key={route}>{page}</div>
+        </div>
+      </main>
+
+      {issue && <DrillSheet issue={issue} onClose={() => setIssue(null)}/>}
+      {tweaksOpen && <TweaksPanel state={tweaks} set={setTweak} onClose={() => { setTweaksOpen(false); try { window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*'); } catch (e) {} }}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<App/>);
+</script>
+</body>
+</html>
