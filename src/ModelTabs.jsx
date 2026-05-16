@@ -563,121 +563,149 @@ function CoverageRow({ label, used, total, tone }) {
   );
 }
 
-export function ModelDataflows() {
-  const dfs = DATA.modelExtras.dataflows;
-  const [selected, setSelected] = React.useState(dfs[1].id); // pre-select the failing one
+const RC_TYPE_BG = { Source: 'var(--modern-icon-bg-sky)', Lakehouse: 'var(--modern-icon-bg-sky)', Warehouse: 'var(--modern-icon-bg-violet)', Notebook: 'var(--modern-icon-bg-violet)', Pipeline: 'var(--modern-icon-bg-emerald)', Semantic: 'var(--modern-icon-bg-amber)' };
+const RC_TYPE_FG = { Source: 'var(--modern-icon-fg-sky)', Lakehouse: 'var(--modern-icon-fg-sky)', Warehouse: 'var(--modern-icon-fg-violet)', Notebook: 'var(--modern-icon-fg-violet)', Pipeline: 'var(--modern-icon-fg-emerald)', Semantic: 'var(--modern-icon-fg-amber)' };
 
-  const sel = dfs.find(d => d.id === selected);
-  const statusMeta = { healthy: { tone: 'emerald', label: 'Healthy' }, warning: { tone: 'amber', label: 'Warning' }, failing: { tone: 'rose', label: 'Failing' } };
+export function ModelDataflows() {
+  const chain = DATA.modelExtras.refreshChain;
+  const [selected, setSelected] = React.useState('pipe-1');
+
+  const DAYS = 14;
+  const dayLabels = Array.from({ length: DAYS }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (DAYS - 1 - i));
+    return d.toLocaleDateString('en', { month: 'numeric', day: 'numeric' });
+  });
+
+  const selItem = chain.find(c => c.id === selected);
+  const failingItems = chain.filter(it => it.runs.some(r => !r.ok));
+  const mostFailing = chain.reduce((worst, it) => {
+    const n = it.runs.filter(r => !r.ok).length;
+    return n > (worst ? worst.runs.filter(r => !r.ok).length : 0) ? it : worst;
+  }, null);
+
+  const totalFails = chain.find(c => c.id === 'sm-1')?.runs.filter(r => !r.ok).length ?? 0;
 
   return (
     <>
       <div className="lp-page-head" style={{ marginBottom: 18 }}>
         <div className="fade-in">
-          <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0, letterSpacing: '-0.01em' }}>Dataflows</h2>
-          <p className="lp-page-sub" style={{ margin: '4px 0 0' }}>Dataflows feeding this semantic model — refresh health, failure rate, downstream impact.</p>
+          <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0, letterSpacing: '-0.01em' }}>Refresh Chain</h2>
+          <p className="lp-page-sub" style={{ margin: '4px 0 0' }}>
+            14-day run history for Sales Analytics and every upstream source — find the layer breaking the chain.
+          </p>
         </div>
         <div className="fade-in d2" style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-outline btn-sm"><Icon name="refresh" size={14}/>Refresh all</button>
+          <button className="btn btn-outline btn-sm"><Icon name="refresh" size={14}/>Trigger refresh</button>
         </div>
       </div>
 
-      <div className="lp-grid-4 fade-in">
-        <div className="lp-card" style={{ padding: '14px 18px' }}>
-          <div className="lp-eyebrow">Dataflows</div>
-          <div className="mono" style={{ fontSize: 28, fontWeight: 700, marginTop: 4 }}>{dfs.length}</div>
-        </div>
-        <div className="lp-card" style={{ padding: '14px 18px', borderColor: dfs.some(d => d.status === 'failing') ? 'oklch(0.55 0.22 25)' : undefined }}>
-          <div className="lp-eyebrow">Failing</div>
-          <div className="mono val-rose" style={{ fontSize: 28, fontWeight: 700, marginTop: 4 }}>{dfs.filter(d => d.status === 'failing').length}</div>
-        </div>
-        <div className="lp-card" style={{ padding: '14px 18px' }}>
-          <div className="lp-eyebrow">Downstream at risk</div>
-          <div className="mono val-amber" style={{ fontSize: 28, fontWeight: 700, marginTop: 4 }}>
-            {dfs.filter(d => d.status !== 'healthy').reduce((s, d) => s + d.downstream, 0)}
+      {mostFailing && mostFailing.runs.filter(r => !r.ok).length > 3 && (
+        <div className="df-alert fade-in" style={{ marginBottom: 16, alignItems: 'flex-start' }}>
+          <Icon name="alert" size={14} style={{ marginTop: 2, flexShrink: 0 }}/>
+          <div style={{ flex: 1 }}>
+            <b>Cascade failure detected</b> — <b>{mostFailing.label}</b> ({mostFailing.type} · {mostFailing.layer}) has{' '}
+            {mostFailing.runs.filter(r => !r.ok).length} of {DAYS} runs failing in 14 days
+            ({Math.round(mostFailing.runs.filter(r => !r.ok).length / DAYS * 100)}% failure rate).
+            This propagates downstream: <b>Sales Analytics</b> missed {totalFails} scheduled refreshes.
           </div>
+          <button className="btn btn-sm" style={{ flexShrink: 0 }}><Icon name="external" size={12}/>Investigate</button>
         </div>
-        <div className="lp-card" style={{ padding: '14px 18px' }}>
-          <div className="lp-eyebrow">Total size</div>
-          <div className="mono" style={{ fontSize: 28, fontWeight: 700, marginTop: 4 }}>
-            {dfs.filter(d => d.size !== '—').length > 0 ? dfs.filter(d => d.size !== '—').map(d => parseFloat(d.size)).reduce((a, b) => a + b, 0).toFixed(1) + ' GB' : '—'}
-          </div>
-        </div>
-      </div>
+      )}
 
-      <div className="lp-grid-money fade-in d2" style={{ alignItems: 'start' }}>
-        <div className="lp-card lp-card-flush">
-          {dfs.map(df => {
-            const sm = statusMeta[df.status];
-            const failRate = Math.round(df.failed / df.runs30d * 100);
-            return (
-              <button key={df.id} className={'df-row' + (selected === df.id ? ' active' : '')} onClick={() => setSelected(df.id)}>
-                <div className="df-row-status" style={{ background: `var(--modern-icon-bg-${sm.tone})`, color: `var(--modern-icon-fg-${sm.tone})` }}>
-                  <Icon name={df.status === 'healthy' ? 'check' : df.status === 'failing' ? 'alert' : 'info'} size={14}/>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="df-row-name">{df.name}</div>
-                  <div className="df-row-meta">
-                    <span className="badge badge-outline">{df.gen}</span>
-                    <span className="muted">· {df.schedule}</span>
-                    {df.downstream > 0 && <span className="df-downstream"><Icon name="git-branch" size={10}/>{df.downstream}</span>}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div className={'mono ' + (df.failed > 0 ? 'val-rose' : 'val-emerald')} style={{ fontSize: 13, fontWeight: 600 }}>
-                    {df.failed > 0 ? `${df.failed} failed` : '0 failed'}
-                  </div>
-                  <div className="muted" style={{ fontSize: 11 }}>of {df.runs30d} runs</div>
-                </div>
-                {df.failed > 0 && (
-                  <div className="df-fail-bar">
-                    <div style={{ width: failRate + '%', height: '100%', background: failRate > 30 ? 'oklch(0.55 0.22 25)' : 'oklch(0.65 0.18 45)', borderRadius: 999 }}/>
-                  </div>
-                )}
-              </button>
-            );
-          })}
+      <div className="lp-card lp-card-flush fade-in d2" style={{ overflowX: 'auto' }}>
+        <div className="rc-header">
+          <div className="rc-label-col"/>
+          {dayLabels.map((d, i) => (
+            <div key={i} className="rc-day-head">{i === DAYS - 1 ? 'Today' : d}</div>
+          ))}
+          <div className="rc-rate-col">Rate</div>
         </div>
 
-        {sel && (
-          <div className="lp-card fade-in">
-            <div className="lp-card-header">
-              <div>
-                <div className="lp-card-title">{sel.name}</div>
-                <div className="lp-card-sub">{sel.gen} · last run {sel.lastRun}</div>
+        {chain.map((item) => {
+          const failCount = item.runs.filter(r => !r.ok).length;
+          const rate = Math.round((DAYS - failCount) / DAYS * 100);
+          const isSel = selected === item.id;
+          const isModel = item.id === 'sm-1';
+          return (
+            <div key={item.id} className={'rc-row' + (isSel ? ' active' : '') + (isModel ? ' rc-row-model' : '')}
+              onClick={() => setSelected(item.id)}>
+              <div className="rc-label-col">
+                <div className="rc-node-icon" style={{ background: RC_TYPE_BG[item.type], color: RC_TYPE_FG[item.type] }}>
+                  <Icon name={item.icon} size={13}/>
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div className="rc-node-name">{item.label}</div>
+                  <div className="rc-node-meta">
+                    <span className="badge badge-outline" style={{ fontSize: 9, height: 15, padding: '0 4px' }}>{item.layer}</span>
+                    <span className="muted" style={{ fontSize: 11 }}>{item.schedule}</span>
+                  </div>
+                </div>
               </div>
-              <span className={'badge tone-' + statusMeta[sel.status].tone + '-soft'}>{statusMeta[sel.status].label}</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
-              {[
-                { l: 'Runs / 30d', v: sel.runs30d },
-                { l: 'Failed', v: sel.failed, rose: sel.failed > 0 },
-                { l: 'Avg duration', v: sel.avgDuration },
-              ].map(s => (
-                <div key={s.l} style={{ textAlign: 'center', padding: '10px 0', borderRight: '1px solid var(--border)' }}>
-                  <div className={'mono ' + (s.rose ? 'val-rose' : '')} style={{ fontSize: 20, fontWeight: 700 }}>{s.v}</div>
-                  <div className="lp-eyebrow" style={{ marginTop: 4 }}>{s.l}</div>
+              {item.runs.map((run, i) => (
+                <div key={i} className="rc-cell">
+                  <div className={'rc-dot' + (run.ok ? ' ok' : ' fail')} title={run.ok ? `Day −${DAYS - 1 - i}: OK` : `Day −${DAYS - 1 - i}: FAILED`}/>
+                  {isModel && !run.ok && <div className="rc-cascade-marker"/>}
                 </div>
               ))}
-            </div>
-            {sel.failed > 0 && (
-              <div className="df-alert">
-                <Icon name="alert" size={14}/>
-                <div>
-                  <b>{sel.failed} failures</b> in 30 days ({Math.round(sel.failed / sel.runs30d * 100)}% failure rate). Downstream: <b>{sel.downstream} artifacts</b> may be serving stale data.
-                  {sel.gen === 'Gen1' && <><br/><span className="muted" style={{ fontSize: 11 }}>Consider migrating to Gen2 for better reliability and monitoring.</span></>}
-                </div>
+              <div className="rc-rate-col">
+                <span className={'mono ' + (rate < 70 ? 'val-rose' : rate < 90 ? 'val-amber' : 'val-emerald')}
+                  style={{ fontSize: 12, fontWeight: 700 }}>
+                  {rate}%
+                </span>
               </div>
-            )}
-            <div className="lp-eyebrow" style={{ marginTop: 14, marginBottom: 8 }}>Actions</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button className="btn btn-outline btn-sm"><Icon name="refresh" size={12}/>Trigger run</button>
-              <button className="btn btn-outline btn-sm"><Icon name="external" size={12}/>View in Fabric</button>
-              {sel.gen === 'Gen1' && <button className="btn btn-sm"><Icon name="arrow-right" size={12}/>Migrate to Gen2</button>}
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ display: 'flex', gap: 16, padding: '8px 2px', fontSize: 12, color: 'var(--muted-foreground)' }}>
+        <span className="rc-legend-item"><span className="rc-dot ok"/>Success</span>
+        <span className="rc-legend-item"><span className="rc-dot fail"/>Failed</span>
+        <span className="rc-legend-item">Click row to inspect · highlighted = selected item</span>
+      </div>
+
+      {selItem && (
+        <div className="lp-card fade-in d2" style={{ marginTop: 4 }}>
+          <div className="lp-card-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className="rc-node-icon" style={{ width: 36, height: 36, borderRadius: 8, background: RC_TYPE_BG[selItem.type], color: RC_TYPE_FG[selItem.type] }}>
+                <Icon name={selItem.icon} size={16}/>
+              </div>
+              <div>
+                <div className="lp-card-title">{selItem.label}</div>
+                <div className="lp-card-sub">{selItem.type} · {selItem.layer} · {selItem.schedule}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {selItem.runs.filter(r => !r.ok).length > 0 && (
+                <span className="badge tone-rose-soft">{selItem.runs.filter(r => !r.ok).length} failures / 14d</span>
+              )}
+              <span className="badge badge-outline">{selItem.type}</span>
             </div>
           </div>
-        )}
-      </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0, borderTop: '1px solid var(--border)' }}>
+            {[
+              { l: 'Runs (14d)',    v: selItem.runs.length },
+              { l: 'Failures',     v: selItem.runs.filter(r => !r.ok).length, rose: selItem.runs.filter(r => !r.ok).length > 0 },
+              { l: 'Success rate', v: Math.round(selItem.runs.filter(r => r.ok).length / selItem.runs.length * 100) + '%' },
+              { l: 'Schedule',     v: selItem.schedule },
+            ].map((s, i) => (
+              <div key={s.l} style={{ textAlign: 'center', padding: '14px 10px', borderRight: i < 3 ? '1px solid var(--border)' : 'none' }}>
+                <div className={'mono ' + (s.rose ? 'val-rose' : '')} style={{ fontSize: 20, fontWeight: 700 }}>{s.v}</div>
+                <div className="lp-eyebrow" style={{ marginTop: 4 }}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            <button className="btn btn-outline btn-sm"><Icon name="refresh" size={12}/>Trigger run</button>
+            <button className="btn btn-outline btn-sm"><Icon name="external" size={12}/>View in Fabric</button>
+            {selItem.runs.filter(r => !r.ok).length > 0 && (
+              <button className="btn btn-sm"><Icon name="alert" size={12}/>View failures</button>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

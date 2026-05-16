@@ -267,45 +267,206 @@ function ModelMeasures() {
   );
 }
 
-function ModelLineage() {
-  return (
-    <div className="lp-card">
-      <div className="lp-card-header">
-        <div><div className="lp-card-title">Lineage graph</div><div className="lp-card-sub">Source → table → measure → report</div></div>
-        <span className="lp-eyebrow">React Flow · interactive</span>
-      </div>
-      <div className="lineage-pane"><LineagePreview/></div>
-    </div>
-  );
-}
+const ML_LAYER_COLORS = {
+  Source: 'oklch(0.55 0.05 250)',
+  Lakehouse: 'oklch(0.62 0.16 237)',
+  Warehouse: 'oklch(0.58 0.16 275)',
+  Notebook: 'oklch(0.58 0.18 290)',
+  Pipeline: 'oklch(0.58 0.14 150)',
+  Semantic: 'oklch(0.66 0.16 75)',
+  Report: 'oklch(0.62 0.16 25)',
+  App: 'oklch(0.55 0.05 250)',
+};
 
-function LineagePreview() {
-  const nodes = [
-    { id: 1, t: 'fact',    x: 14, y: 22, label: 'FactSales',      icon: 'database' },
-    { id: 2, t: 'dim',     x: 14, y: 48, label: 'DimProduct',     icon: 'database' },
-    { id: 3, t: 'dim',     x: 14, y: 74, label: 'DimDate',        icon: 'calendar' },
-    { id: 4, t: 'measure', x: 48, y: 22, label: 'Total Sales',    icon: 'bar-chart' },
-    { id: 5, t: 'measure', x: 48, y: 44, label: 'YTD Revenue',    icon: 'bar-chart' },
-    { id: 6, t: 'measure', x: 48, y: 66, label: 'Gross Margin',   icon: 'bar-chart' },
-    { id: 7, t: 'measure', x: 82, y: 34, label: 'Sales Growth %', icon: 'trend-up' },
-    { id: 8, t: 'measure', x: 82, y: 60, label: 'KPI Card Total', icon: 'zap' },
-  ];
-  const edges = [ [1,4],[1,5],[1,6],[2,4],[2,6],[3,5],[4,7],[5,7],[6,8],[4,8] ];
-  const posById = Object.fromEntries(nodes.map(n => [n.id, n]));
+function ModelLineage() {
+  const l = DATA.lineage;
+  const [selected, setSelected] = React.useState('sm-1');
+  const [viewAll, setViewAll] = React.useState(false);
+
+  const upstream = new Set(), downstream = new Set();
+  const collect = (id, set, dir) => {
+    l.edges.forEach(([a, b]) => {
+      if (dir === 'up' && b === id && !set.has(a)) { set.add(a); collect(a, set, 'up'); }
+      if (dir === 'down' && a === id && !set.has(b)) { set.add(b); collect(b, set, 'down'); }
+    });
+  };
+  collect(selected, upstream, 'up');
+  collect(selected, downstream, 'down');
+
+  const sm1Up = new Set(), sm1Down = new Set();
+  const collectSm1 = (id, set, dir) => {
+    l.edges.forEach(([a, b]) => {
+      if (dir === 'up' && b === id && !set.has(a)) { set.add(a); collectSm1(a, set, 'up'); }
+      if (dir === 'down' && a === id && !set.has(b)) { set.add(b); collectSm1(b, set, 'down'); }
+    });
+  };
+  collectSm1('sm-1', sm1Up, 'up');
+  collectSm1('sm-1', sm1Down, 'down');
+  const connectedIds = new Set(['sm-1', ...sm1Up, ...sm1Down]);
+
+  const visibleNodes = viewAll ? l.nodes : l.nodes.filter(n => connectedIds.has(n.id));
+  const visibleIds = new Set(visibleNodes.map(n => n.id));
+
+  const isHighlit = (id) => id === selected || upstream.has(id) || downstream.has(id);
+  const edgeHighlit = ([a, b]) =>
+    (upstream.has(a) || a === selected) && (downstream.has(b) || b === selected) ||
+    (a === selected) || (b === selected);
+
+  const sel = l.nodes.find(n => n.id === selected);
+  const W = 1140, H = 440;
+
   return (
     <>
-      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-        {edges.map(([a, b], i) => {
-          const A = posById[a], B = posById[b];
-          return <path key={i} d={`M ${A.x}% ${A.y}% C ${(A.x + B.x) / 2}% ${A.y}%, ${(A.x + B.x) / 2}% ${B.y}%, ${B.x}% ${B.y}%`} stroke="oklch(0.72 0.02 250)" strokeWidth="1.3" fill="none"/>;
-        })}
-      </svg>
-      {nodes.map(n => (
-        <div key={n.id} className={'ln-node ' + n.t} style={{ left: n.x + '%', top: n.y + '%', transform: 'translate(-50%, -50%)' }}>
-          <div className="ln-icon"><Icon name={n.icon} size={12}/></div>
-          {n.label}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>E2E Lineage — Sales Analytics</div>
+          <div className="lp-page-sub" style={{ margin: '3px 0 0' }}>
+            Source → Storage → Process → Model → Reports → Apps · click any node to trace upstream and downstream
+          </div>
         </div>
-      ))}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button className={'btn btn-outline btn-sm' + (viewAll ? '' : '')} onClick={() => setViewAll(v => !v)}>
+            <Icon name="boxes" size={12}/>{viewAll ? 'Connected only' : 'Show all'}
+          </button>
+        </div>
+      </div>
+
+      <div className="lp-card lineage-card fade-in">
+        <div className="lineage-legend">
+          {Object.entries(ML_LAYER_COLORS).map(([k, c]) => (
+            <span key={k} className="ln-leg"><span className="ln-leg-dot" style={{ background: c }}/>{k}</span>
+          ))}
+        </div>
+        <div className="lineage-canvas">
+          <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <marker id="ml-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M0,0 L10,5 L0,10 z" fill="oklch(0.65 0.06 250)"/>
+              </marker>
+              <marker id="ml-arrow-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0,0 L10,5 L0,10 z" fill="oklch(0.55 0.18 237)"/>
+              </marker>
+            </defs>
+            {[0,1,2,3,4,5].map(layer => (
+              <text key={layer} x={[80,280,460,640,820,1000][layer]} y={26} fontSize="10" textAnchor="middle"
+                fontFamily="JetBrains Mono" fill="oklch(0.55 0.03 250)" letterSpacing="0.08em">
+                {['SOURCE','STORAGE','PROCESS','MODEL','REPORT','APP'][layer]}
+              </text>
+            ))}
+            {l.edges.filter(([a, b]) => visibleIds.has(a) && visibleIds.has(b)).map(([a, b], i) => {
+              const A = l.nodes.find(n => n.id === a), B = l.nodes.find(n => n.id === b);
+              if (!A || !B) return null;
+              const hot = edgeHighlit([a, b]);
+              const mid = (A.x + B.x) / 2;
+              return (
+                <path key={i}
+                  d={`M ${A.x+70} ${A.y} C ${mid} ${A.y}, ${mid} ${B.y}, ${B.x-70} ${B.y}`}
+                  stroke={hot ? 'oklch(0.55 0.18 237)' : 'oklch(0.85 0.02 250)'}
+                  strokeWidth={hot ? 2 : 1.2}
+                  fill="none"
+                  markerEnd={hot ? 'url(#ml-arrow-hot)' : 'url(#ml-arrow)'}
+                  opacity={hot ? 1 : 0.6}
+                />
+              );
+            })}
+            {visibleNodes.map(n => {
+              const stale = n.status === 'sleeper' || n.status === 'orphan' || n.status === 'dormant';
+              const isSel = n.id === selected;
+              const lit = isHighlit(n.id);
+              const dimmed = !lit;
+              return (
+                <g key={n.id} onClick={() => setSelected(s => s === n.id ? 'sm-1' : n.id)} style={{ cursor: 'pointer' }}>
+                  <rect x={n.x-70} y={n.y-22} width="140" height="44" rx="8"
+                    fill={lit ? 'var(--card)' : 'oklch(0.97 0.005 250)'}
+                    stroke={isSel ? ML_LAYER_COLORS[n.type] : (stale ? 'oklch(0.66 0.16 55)' : 'oklch(0.88 0.02 250)')}
+                    strokeWidth={isSel ? 2.5 : 1}
+                    strokeDasharray={stale ? '3 3' : 'none'}
+                    opacity={dimmed ? 0.35 : 1}
+                    style={{ transition: 'all 180ms ease' }}
+                    filter={isSel ? 'drop-shadow(0 2px 8px oklch(0.66 0.16 75 / 0.3))' : undefined}
+                  />
+                  <circle cx={n.x-56} cy={n.y-6} r="4" fill={ML_LAYER_COLORS[n.type]} opacity={dimmed ? 0.35 : 1}/>
+                  <text x={n.x-46} y={n.y-2} fontSize="10" fontFamily="DM Sans" fontWeight="600" fill="var(--foreground)" opacity={dimmed ? 0.35 : 1}>
+                    {n.label.length > 16 ? n.label.slice(0,16)+'…' : n.label}
+                  </text>
+                  <text x={n.x-46} y={n.y+12} fontSize="9" fontFamily="JetBrains Mono" fill="oklch(0.50 0.03 250)" opacity={dimmed ? 0.25 : 1}>
+                    {n.cost > 0 ? '€'+n.cost+'/mo · ' : ''}{n.lastSeen}
+                  </text>
+                  {stale && <circle cx={n.x+60} cy={n.y-14} r="4" fill="oklch(0.66 0.16 55)"/>}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+
+      {sel && (
+        <div className="lp-card fade-in d2" style={{ marginTop: 14 }}>
+          <div className="lp-card-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, background: ML_LAYER_COLORS[sel.type] + '20', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                <span style={{ width: 12, height: 12, borderRadius: '50%', background: ML_LAYER_COLORS[sel.type], display: 'block' }}/>
+              </div>
+              <div>
+                <div className="lp-card-title">{sel.label}</div>
+                <div className="lp-card-sub">{sel.kind} · {sel.type} layer · last seen {sel.lastSeen}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {(sel.status === 'sleeper' || sel.status === 'orphan' || sel.status === 'dormant') && <span className="badge tone-amber-soft">Sleeper</span>}
+              <span className="badge badge-outline">{sel.type}</span>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderTop: '1px solid var(--border)', marginBottom: 16 }}>
+            {[
+              { l: 'Upstream', v: upstream.size },
+              { l: 'Downstream', v: downstream.size },
+              { l: '/mo cost', v: sel.cost > 0 ? '€'+sel.cost : '—', rose: sel.cost > 0 && (sel.status === 'sleeper' || sel.status === 'orphan') },
+            ].map((s, i) => (
+              <div key={s.l} style={{ textAlign: 'center', padding: '14px 0', borderRight: i < 2 ? '1px solid var(--border)' : 'none' }}>
+                <div className={'mono ' + (s.rose ? 'val-rose' : '')} style={{ fontSize: 22, fontWeight: 700 }}>{s.v}</div>
+                <div className="lp-eyebrow" style={{ marginTop: 4 }}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+            <div>
+              <div className="lp-eyebrow" style={{ marginBottom: 6 }}>Upstream <span className="mono muted">({upstream.size})</span></div>
+              {upstream.size === 0
+                ? <div className="muted" style={{ fontSize: 12 }}>Source node — no upstream dependencies.</div>
+                : Array.from(upstream).map(id => {
+                    const n = l.nodes.find(x => x.id === id);
+                    return (
+                      <button key={id} className="trace-row" onClick={() => setSelected(id)}>
+                        <span className="trace-dot" style={{ background: ML_LAYER_COLORS[n.type] }}/>
+                        <span className="trace-name">{n.label}</span>
+                        <span className="badge badge-outline" style={{ fontSize: 10 }}>{n.type}</span>
+                        <span className="muted mono" style={{ fontSize: 10 }}>{n.lastSeen}</span>
+                      </button>
+                    );
+                  })
+              }
+            </div>
+            <div>
+              <div className="lp-eyebrow" style={{ marginBottom: 6 }}>Downstream <span className="mono muted">({downstream.size})</span></div>
+              {downstream.size === 0
+                ? <div className="muted" style={{ fontSize: 12 }}>Leaf node — no downstream consumers.</div>
+                : Array.from(downstream).map(id => {
+                    const n = l.nodes.find(x => x.id === id);
+                    return (
+                      <button key={id} className="trace-row" onClick={() => setSelected(id)}>
+                        <span className="trace-dot" style={{ background: ML_LAYER_COLORS[n.type] }}/>
+                        <span className="trace-name">{n.label}</span>
+                        <span className="badge badge-outline" style={{ fontSize: 10 }}>{n.type}</span>
+                        <span className="muted mono" style={{ fontSize: 10 }}>{n.lastSeen}</span>
+                      </button>
+                    );
+                  })
+              }
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
