@@ -31,7 +31,7 @@ export function Adoption() {
       <div className="lp-section-head">
         <h2>Onboarding & Copilot <span className="count">Pick a lens</span></h2>
         <span className="seg-tabs">
-          {[['funnel','Onboarding funnel'],['cohorts','Cohorts'],['copilot','Copilot adoption']].map(([k,l]) => (
+          {[['funnel','Onboarding funnel'],['cohorts','Cohorts'],['copilot','Copilot adoption'],['reports','Report adoption']].map(([k,l]) => (
             <button key={k} className={'seg-tab' + (tab === k ? ' active' : '')} onClick={() => setTab(k)}>{l}</button>
           ))}
         </span>
@@ -152,7 +152,135 @@ export function Adoption() {
           </div>
         </div>
       )}
+
+      {tab === 'reports' && <ReportAdoption rc={a.reportConsumption}/>}
     </>
+  );
+}
+
+function ReportAdoption({ rc }) {
+  const W = 600, H = 120;
+  const max = Math.max(...rc.trend30) * 1.1;
+  const stepX = W / (rc.trend30.length - 1);
+  const pts = rc.trend30.map((v, i) => [i * stepX, H - (v / max) * H]);
+  const linePath = pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const areaPath = `${linePath} L${W},${H} L0,${H} Z`;
+
+  const STATUS_PILL = {
+    broken:  { bg: 'oklch(0.94 0.06 25)',  fg: 'oklch(0.42 0.17 25)',  label: 'Broken' },
+    orphan:  { bg: 'oklch(0.95 0.07 60)',  fg: 'oklch(0.46 0.15 55)',  label: 'Orphan' },
+    dormant: { bg: 'oklch(0.94 0.03 250)', fg: 'oklch(0.42 0.14 250)', label: 'Dormant' },
+  };
+
+  return (
+    <div className="fade-in">
+      <div className="lp-grid-4" style={{ marginBottom: 14 }}>
+        <StatCard label="Total opens · 30d"  value={rc.totalOpens30.toLocaleString()} icon="bar-chart" tone="sky"/>
+        <StatCard label="Unique readers"      value={rc.uniqueViewers30} delta={rc.newViewers} sub={'+' + rc.newViewers + ' new this month'} icon="users" tone="emerald"/>
+        <StatCard label="Open rate"           value={Math.round(rc.avgOpenRate * 100) + '%'} sub="readers / licensed" icon="activity" tone="violet"/>
+        <StatCard label="Dormant reports"     value={23} sub="zero opens in 30d" icon="moon" tone="amber"/>
+      </div>
+
+      <div className="lp-card" style={{ marginBottom: 14 }}>
+        <div className="lp-card-header">
+          <div>
+            <div className="lp-card-title">Daily report opens · 30 days</div>
+            <div className="lp-card-sub">{rc.totalOpens30.toLocaleString()} total opens</div>
+          </div>
+        </div>
+        <div className="rep-trend-chart">
+          <svg width="100%" height="120" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="rep-area-grad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%"   stopColor="oklch(0.69 0.17 237)" stopOpacity="0.28"/>
+                <stop offset="100%" stopColor="oklch(0.69 0.17 237)" stopOpacity="0.02"/>
+              </linearGradient>
+            </defs>
+            <path d={areaPath} fill="url(#rep-area-grad)"/>
+            <path d={linePath} fill="none" stroke="oklch(0.56 0.18 237)" strokeWidth="0.8" vectorEffect="non-scaling-stroke"/>
+          </svg>
+        </div>
+      </div>
+
+      <div className="lp-grid-2">
+        <div className="lp-card lp-card-flush">
+          <div className="lp-card-header" style={{ padding:'14px 16px 10px', marginBottom:0 }}>
+            <div>
+              <div className="lp-card-title">Top reports · by opens 30d</div>
+            </div>
+          </div>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+            <thead>
+              <tr>
+                {['#','Report','Workspace','Opens','Viewers','7d trend'].map(h => (
+                  <th key={h} style={{ padding:'6px 12px', textAlign:'left', fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.04em', color:'var(--muted-foreground)', borderBottom:'1px solid var(--border)', whiteSpace:'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rc.topReports.map((rep, i) => (
+                <tr key={rep.name} style={{ borderBottom: i < rc.topReports.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                  <td style={{ padding:'8px 12px' }}><span className="rep-rank-num">{i + 1}</span></td>
+                  <td style={{ padding:'8px 12px', fontWeight:600, maxWidth:160, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{rep.name}</td>
+                  <td style={{ padding:'8px 12px', color:'var(--muted-foreground)', fontSize:11 }}>{rep.ws}</td>
+                  <td style={{ padding:'8px 12px', fontFamily:'var(--font-mono)', fontWeight:600 }}>{rep.opens30.toLocaleString()}</td>
+                  <td style={{ padding:'8px 12px', fontFamily:'var(--font-mono)' }}>{rep.viewers30}</td>
+                  <td style={{ padding:'8px 12px' }}><MiniSparkline data={rep.trend}/></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="lp-card lp-card-flush">
+          <div className="lp-card-header" style={{ padding:'14px 16px 10px', marginBottom:0 }}>
+            <div>
+              <div className="lp-card-title">Archive candidates · zero or low activity</div>
+            </div>
+          </div>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+            <thead>
+              <tr>
+                {['Report','Last open','Status'].map(h => (
+                  <th key={h} style={{ padding:'6px 12px', textAlign:'left', fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.04em', color:'var(--muted-foreground)', borderBottom:'1px solid var(--border)', whiteSpace:'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rc.bottomReports.map((rep, i) => {
+                const pill = STATUS_PILL[rep.status] || STATUS_PILL.dormant;
+                return (
+                  <tr key={rep.name} style={{ borderBottom: i < rc.bottomReports.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                    <td style={{ padding:'10px 12px', fontWeight:600 }}>{rep.name}</td>
+                    <td style={{ padding:'10px 12px', fontFamily:'var(--font-mono)', color:'var(--muted-foreground)', fontSize:11 }}>{rep.lastOpen}</td>
+                    <td style={{ padding:'10px 12px' }}>
+                      <span style={{ display:'inline-flex', alignItems:'center', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:999, background: pill.bg, color: pill.fg, textTransform:'uppercase', letterSpacing:'0.04em' }}>
+                        {pill.label}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MiniSparkline({ data }) {
+  const W = 50, H = 20;
+  const max = Math.max(...data, 1);
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * W;
+    const y = H - (v / max) * (H - 4) - 2;
+    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return (
+    <svg width={50} height={20} className="mini-spark" viewBox={`0 0 ${W} ${H}`}>
+      <path d={pts} fill="none" stroke="oklch(0.69 0.17 237)" strokeWidth="1.5" vectorEffect="non-scaling-stroke"/>
+    </svg>
   );
 }
 
