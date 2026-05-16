@@ -394,6 +394,74 @@ const DATA = {
     ],
   },
 
+  userAccess: {
+    u1: {
+      direct: [
+        { id: 'da1', type: 'workspace', name: 'Finance-Prod',  role: 'Contributor', since: '2024-08-12', lastUsed: '2h ago',  risk: null,
+          reports:  ['Margin Dashboard', 'YTD Variance Report', 'EMEA Quarterly Review'],
+          datasets: ['Sales Analytics', 'Budget Planning', 'Revenue Forecast'] },
+        { id: 'da2', type: 'workspace', name: 'Marketing',     role: 'Viewer',      since: '2025-01-10', lastUsed: '23d ago', risk: null,
+          reports:  ['Marketing Funnel 2024'],
+          datasets: ['Marketing Funnel 2024'] },
+        { id: 'da3', type: 'workspace', name: 'Ops-Legacy-2022', role: 'Admin',     since: '2023-03-01', lastUsed: '94d ago', risk: 'Admin · unused 94d',
+          reports:  [],
+          datasets: [] },
+      ],
+      viaGroups: [
+        { id: 'ga1', group: 'Finance-All', groupType: 'Security Group', memberSince: '2023-06-01',
+          grants: [
+            { id: 'g1a', type: 'app',       name: 'Sales Insights App',     role: 'Viewer', lastUsed: '3d ago',  reports: ['Pipeline 360', 'Margin Dashboard'] },
+            { id: 'g1b', type: 'workspace', name: 'Shared-Finance-Reports', role: 'Viewer', lastUsed: '8d ago',  reports: ['EMEA Quarterly Review'], datasets: ['Revenue Forecast'] },
+          ]},
+        { id: 'ga2', group: 'EMEA-Finance-Reporting', groupType: 'M365 Group', memberSince: '2024-02-14',
+          grants: [
+            { id: 'g2a', type: 'app',       name: 'EMEA Executive Dashboard', role: 'Viewer', lastUsed: '1w ago',   reports: ['EMEA Quarterly Review'] },
+          ]},
+        { id: 'ga3', group: 'BI-Power-Users', groupType: 'Security Group', memberSince: '2024-06-01',
+          grants: [
+            { id: 'g3a', type: 'workspace', name: 'BI-Dev-Sandbox',  role: 'Contributor', lastUsed: 'never', reports: [], datasets: [] },
+          ]},
+      ],
+    },
+    u2: {
+      direct: [
+        { id: 'da1', type: 'workspace', name: 'Finance-Prod',  role: 'Admin',       since: '2023-01-15', lastUsed: '1h ago',  risk: null,
+          reports:  ['Margin Dashboard', 'YTD Variance Report', 'EMEA Quarterly Review', 'Budget vs Actuals'],
+          datasets: ['Sales Analytics', 'Budget Planning', 'Revenue Forecast'] },
+        { id: 'da2', type: 'workspace', name: 'BI-Dev-Sandbox',role: 'Admin',       since: '2023-01-15', lastUsed: '4h ago',  risk: null,
+          reports:  [],
+          datasets: ['Sales Analytics DEV', 'Budget Planning DEV'] },
+        { id: 'da3', type: 'workspace', name: 'Data-Platform', role: 'Contributor', since: '2024-03-20', lastUsed: '2d ago',  risk: null,
+          reports:  [],
+          datasets: ['ERP Bronze', 'CRM Staging'] },
+      ],
+      viaGroups: [
+        { id: 'ga1', group: 'Finance-All', groupType: 'Security Group', memberSince: '2023-01-15',
+          grants: [
+            { id: 'g1a', type: 'app',       name: 'Sales Insights App',    role: 'Viewer', lastUsed: '5d ago', reports: ['Pipeline 360'] },
+            { id: 'g1b', type: 'app',       name: 'EMEA Executive Dashboard', role: 'Viewer', lastUsed: '1w ago', reports: ['EMEA Quarterly Review'] },
+          ]},
+        { id: 'ga2', group: 'BI-Power-Users', groupType: 'Security Group', memberSince: '2023-01-15',
+          grants: [
+            { id: 'g2a', type: 'workspace', name: 'Shared-Finance-Reports', role: 'Contributor', lastUsed: '3d ago', reports: ['EMEA Quarterly Review'], datasets: ['Revenue Forecast'] },
+          ]},
+      ],
+    },
+    default: {
+      direct: [
+        { id: 'da1', type: 'workspace', name: 'Finance-Prod',  role: 'Viewer',  since: '2024-09-01', lastUsed: '5d ago', risk: null,
+          reports:  ['Margin Dashboard'],
+          datasets: ['Sales Analytics'] },
+      ],
+      viaGroups: [
+        { id: 'ga1', group: 'All-Staff-PBI', groupType: 'Security Group', memberSince: '2024-01-01',
+          grants: [
+            { id: 'g1a', type: 'app', name: 'Company KPI Dashboard', role: 'Viewer', lastUsed: '12d ago', reports: ['Operations Scorecard'] },
+          ]},
+      ],
+    },
+  },
+
   adoption: {
     dau: { v: 124, delta: 8, spark: __spark(30, 100, 0.2) },
     wau: { v: 287, delta: 3, spark: __spark(30, 250, 0.15) },
