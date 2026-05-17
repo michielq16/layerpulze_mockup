@@ -219,14 +219,16 @@ const DATA = {
       { key: 'custom',    label: 'Custom',      sub: 'Pick sections manually' },
     ],
     items: [
-      { id: 'd1', model: 'RetailOperations',        ws: 'RetailOps',     type: 'Data Dictionary',       status: 'current',  tables: 13, measures: 47, docs: 11, updated: '11m ago', size: '24.6 KB', tone: 'rose' },
-      { id: 'd2', model: 'Management of Change',    ws: 'Operations',    type: 'Full Documentation',    status: 'current',  tables: 46, measures: 30, docs: 9,  updated: '1h ago',  size: '38.1 KB', tone: 'amber' },
-      { id: 'd3', model: 'Operations Scorecard',    ws: 'Ops-Score',     type: 'Data Dictionary',       status: 'current',  tables: 74, measures: 579, docs: 6, updated: '6h ago',  size: '78.4 KB', tone: 'emerald' },
-      { id: 'd4', model: 'Sales Analytics',         ws: 'Finance-Prod',  type: 'Full Documentation',    status: 'outdated', tables: 12, measures: 42, docs: 8,  updated: '9d ago',  size: '52.6 KB', tone: 'sky' },
-      { id: 'd5', model: 'Budget Planning',         ws: 'Finance-Prod',  type: 'Health Check (Dev)',    status: 'current',  tables: 8,  measures: 15, docs: 4,  updated: '2d ago',  size: '21.5 KB', tone: 'violet' },
-      { id: 'd6', model: 'Revenue Forecast',        ws: 'Finance-Prod',  type: 'Executive Summary',     status: 'outdated', tables: 9,  measures: 31, docs: 3,  updated: '14d ago', size: '18.9 KB', tone: 'amber' },
-      { id: 'd7', model: 'HR Headcount',            ws: 'HR-Data',       type: 'Data Dictionary',       status: 'current',  tables: 6,  measures: 22, docs: 5,  updated: '3d ago',  size: '19.2 KB', tone: 'emerald' },
-      { id: 'd8', model: 'Marketing Funnel',        ws: 'Marketing',     type: 'Full Documentation',    status: 'current',  tables: 11, measures: 38, docs: 7,  updated: '5h ago',  size: '41.8 KB', tone: 'sky' },
+      { id: 'd1', model: 'RetailOperations',        ws: 'RetailOps',     audience: 'auditor',   format: 'docx', status: 'current',  schedule: 'weekly',  scheduleNext: 'Mon 06:00', updated: '11m ago', updatedAbs: '2026-05-17 11:23 UTC', size: '24.6 KB', tone: 'rose'    },
+      { id: 'd2', model: 'Management of Change',    ws: 'Operations',    audience: 'engineer',  format: 'docx', status: 'current',  schedule: 'onchange', scheduleNext: 'on model change', updated: '1h ago',  updatedAbs: '2026-05-17 10:42 UTC', size: '38.1 KB', tone: 'amber'   },
+      { id: 'd3', model: 'Operations Scorecard',    ws: 'Ops-Score',     audience: 'analyst',   format: 'docx', status: 'current',  schedule: 'monthly', scheduleNext: '1st of month', updated: '6h ago',  updatedAbs: '2026-05-17 05:31 UTC', size: '78.4 KB', tone: 'emerald' },
+      { id: 'd4', model: 'Sales Analytics',         ws: 'Finance-Prod',  audience: 'auditor',   format: 'docx', status: 'outdated', schedule: 'off',                                  updated: '9d ago',  updatedAbs: '2026-05-08 09:14 UTC', size: '52.6 KB', tone: 'sky'     },
+      { id: 'd5', model: 'Budget Planning',         ws: 'Finance-Prod',  audience: 'analyst',   format: 'docx', status: 'current',  schedule: 'weekly',  scheduleNext: 'Mon 06:00', updated: '2d ago',  updatedAbs: '2026-05-15 06:00 UTC', size: '21.5 KB', tone: 'violet'  },
+      { id: 'd6', model: 'Revenue Forecast',        ws: 'Finance-Prod',  audience: 'executive', format: 'pdf',  status: 'outdated', schedule: 'off',                                  updated: '14d ago', updatedAbs: '2026-05-03 14:08 UTC', size: '18.9 KB', tone: 'amber'   },
+      { id: 'd7', model: 'HR Headcount',            ws: 'HR-Data',       audience: 'auditor',   format: 'docx', status: 'current',  schedule: 'monthly', scheduleNext: '1st of month', updated: '3d ago',  updatedAbs: '2026-05-14 03:00 UTC', size: '19.2 KB', tone: 'emerald' },
+      { id: 'd8', model: 'Marketing Funnel',        ws: 'Marketing',     audience: 'engineer',  format: 'md',   status: 'current',  schedule: 'off',                                  updated: '5h ago',  updatedAbs: '2026-05-17 06:22 UTC', size: '41.8 KB', tone: 'sky'     },
+      { id: 'd9', model: 'Sales Analytics',         ws: 'Finance-Prod',  audience: 'analyst',   format: 'docx', status: 'outdated', schedule: 'off',                                  updated: '11d ago', updatedAbs: '2026-05-06 16:42 UTC', size: '48.3 KB', tone: 'sky'     },
+      { id: 'd10',model: 'GL Balances',             ws: 'Finance-Prod',  audience: 'auditor',   format: 'docx', status: 'current',  schedule: 'weekly',  scheduleNext: 'Mon 06:00', updated: '4d ago',  updatedAbs: '2026-05-13 06:00 UTC', size: '22.8 KB', tone: 'rose'    },
     ],
   },
 
@@ -890,6 +892,40 @@ const DATA = {
       { workspace: 'HR-Data',          principal: 'HR-Limited',          kind: 'Group',  role: 'Viewer',      members: 12, lastUsed: '6d ago',   risk: 'low' },
       { workspace: 'Sandbox',          principal: 'sara.patel@…',        kind: 'User',   role: 'Admin',       members:  1, lastUsed: '1d ago',   risk: 'med' },
       { workspace: 'Sales',            principal: 'svc-bi-runner',       kind: 'ServicePrincipal', role: 'Admin', members: 1, lastUsed: '4m ago', risk: 'high' },
+    ],
+  },
+
+  // /users-new — sketch of UPN-first Users page (priority #2). Keeps `users` shape untouched.
+  usersNew: {
+    summary: {
+      seats:             487,
+      wastedLicensesCost: 1820,   // Pro/PPU assigned, 0 activity 30d → € reclaimable
+      wastedSeats:        17,
+      admins:             34,
+      adminsRatio:        '34 : 453',
+      highRiskCount:      4,
+    },
+    // Per-user extension keyed by users.top id. Adds dimensions the new page needs without
+    // disturbing the existing /users page that reads users.top.
+    ext: {
+      u1:  { upn: 'sara.patel@contoso.onmicrosoft.com',     lastActive: '2h',   lastActiveAbs: '2026-05-17 12:14 UTC', ws30d: 8,  reports30d: 14, adminCount: 1, risk: 'amber', riskReasons: ['Admin on Ops-Legacy-2022 · unused 94d'] },
+      u2:  { upn: 'michiel.v@contoso.onmicrosoft.com',      lastActive: '14m',  lastActiveAbs: '2026-05-17 14:02 UTC', ws30d: 12, reports30d: 27, adminCount: 4, risk: 'sky',   riskReasons: [] },
+      u3:  { upn: 'anita.v@contoso.onmicrosoft.com',        lastActive: '1d',   lastActiveAbs: '2026-05-16 16:08 UTC', ws30d: 5,  reports30d: 9,  adminCount: 0, risk: 'amber', riskReasons: ['Export-heavy · 198 exports / 30d'] },
+      u4:  { upn: 'daniel.o@contoso.onmicrosoft.com',       lastActive: '3h',   lastActiveAbs: '2026-05-17 11:42 UTC', ws30d: 4,  reports30d: 6,  adminCount: 2, risk: 'rose',  riskReasons: ['High export · 312/30d', 'Off-hours access · 9 sessions', 'Admin on Sales-Prod'] },
+      u5:  { upn: 'emilia.r@contoso.onmicrosoft.com',       lastActive: '6h',   lastActiveAbs: '2026-05-17 08:21 UTC', ws30d: 3,  reports30d: 4,  adminCount: 0, risk: 'sky',   riskReasons: [] },
+      u6:  { upn: 'hans.b@contoso.onmicrosoft.com',         lastActive: '12m',  lastActiveAbs: '2026-05-17 14:04 UTC', ws30d: 14, reports30d: 8,  adminCount: 3, risk: 'sky',   riskReasons: [] },
+      u7:  { upn: 'yuki.t@contoso.onmicrosoft.com',         lastActive: '4h',   lastActiveAbs: '2026-05-17 10:38 UTC', ws30d: 3,  reports30d: 11, adminCount: 0, risk: 'sky',   riskReasons: [] },
+      u8:  { upn: 'maya.g@contoso.onmicrosoft.com',         lastActive: '2d',   lastActiveAbs: '2026-05-15 10:08 UTC', ws30d: 2,  reports30d: 6,  adminCount: 0, risk: 'sky',   riskReasons: [] },
+      u9:  { upn: 'jakub.n@contoso.onmicrosoft.com',        lastActive: '67d',  lastActiveAbs: '2026-03-11 09:14 UTC', ws30d: 0,  reports30d: 0,  adminCount: 0, risk: 'amber', riskReasons: ['Dormant 67d · Free license'] },
+      u10: { upn: 'priya.s@contoso.onmicrosoft.com',        lastActive: '5h',   lastActiveAbs: '2026-05-17 09:33 UTC', ws30d: 4,  reports30d: 7,  adminCount: 1, risk: 'amber', riskReasons: ['Export-heavy · 156/30d'] },
+      u11: { upn: 'felix.b@contoso.onmicrosoft.com',        lastActive: '2d',   lastActiveAbs: '2026-05-15 16:42 UTC', ws30d: 6,  reports30d: 5,  adminCount: 0, risk: 'sky',   riskReasons: [] },
+      u12: { upn: 'lena.h@contoso.onmicrosoft.com',         lastActive: '8h',   lastActiveAbs: '2026-05-17 06:24 UTC', ws30d: 9,  reports30d: 3,  adminCount: 2, risk: 'sky',   riskReasons: [] },
+    },
+    // Extra users that only appear on /users-new — chosen to seed clear high-risk + wasted-license cases.
+    extras: [
+      { id: 'u13', upn: 'jens.muller@contoso.onmicrosoft.com',   name: 'Jens Müller',      dept: 'Sales',      role: 'Regional Mgr',  licenseSku: 'PPU',  licenseCost: 200, lastActive: '184d', lastActiveAbs: '2025-11-15 11:42 UTC', ws30d: 0,  reports30d: 0,  adminCount: 0, risk: 'rose',  riskReasons: ['Dormant 184d · PPU $200/mo wasted'] },
+      { id: 'u14', upn: 'svc-finance-runner@contoso.onmicrosoft.com', name: 'svc-finance-runner', dept: 'IT',  role: 'Service Acct',  licenseSku: 'Fabric F1', licenseCost: 262, lastActive: '92d',  lastActiveAbs: '2026-02-15 03:00 UTC', ws30d: 0,  reports30d: 0,  adminCount: 8, risk: 'rose',  riskReasons: ['Service account · Admin on 8 workspaces', 'No activity 92d', 'Off-hours pattern: 03:00 UTC'] },
+      { id: 'u15', upn: 'amelia.shaw@contoso.onmicrosoft.com',   name: 'Amelia Shaw',      dept: 'Finance',    role: 'Auditor',       licenseSku: 'Pro',  licenseCost: 10,  lastActive: '38d',  lastActiveAbs: '2026-04-09 14:20 UTC', ws30d: 0,  reports30d: 0,  adminCount: 1, risk: 'amber', riskReasons: ['Dormant 38d', 'Admin on Audit-2025 unused 38d'] },
     ],
   },
 };
