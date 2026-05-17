@@ -182,23 +182,27 @@ When starting a session your first message should:
 
 ---
 
-## PostHog MCP server (available in web sessions)
+## PostHog MCP server (web + local)
 
-Server ID: `69da6aa2-a3df-4104-9a26-fdc28f53eacf` (PostHog).
+Available on both Claude Code on the web AND local Claude Code sessions. The server ID prefix differs by surface; the **scope is identical** so the same queries work on either.
 
-**Active scope (do not re-ask):**
+**Active scope (do not re-ask — applies to both surfaces):**
 - Organization: `LayerPulse` (id `019dcb6d-e5d2-0000-b7e0-327631854c1d`)
 - Project: `Default project` (id `167104`)
 - Project timezone: UTC
 - User: Michiel (`michielq@gmail.com`)
 - `person.properties.*` on the events table returns the person's *current* value (query-time), regardless of when the event occurred.
 
-**Tool domains** (prefix `mcp__69da6aa2-a3df-4104-9a26-fdc28f53eacf__exec` + domain):
+**Tool prefix by surface:**
+- Web (cloud container): `mcp__69da6aa2-a3df-4104-9a26-fdc28f53eacf__exec`
+- Local terminal: `mcp__claude_ai_PostHog__exec`
+
+**Tool domains** (append after `__exec`):
 action, activity-log, advanced-activity-logs, alert, annotation, approval-policies, approval-policy, cdp-function-templates, cdp-functions, change-request, cohorts, comment, conversations-tickets, dashboard, docs-search, early-access-feature, endpoint, error-tracking, event-definition, execute-sql, experiment, external-data-schemas, external-data-sources, external-data-sync-logs, feature-flag, hog-flows-logs, hog-flows-metrics, inbox, insight, integration, llm, llma-evaluation-*, llma-prompt-duplicate, llma-score-definition-new-version, llma-skill-*, logs, notebooks, org-members, organization, persons, project, proxy, read-data-schema, read-data-warehouse-schema, role, scheduled-changes, sdk-doctor, session-recording, sql-variables, subscriptions, survey, switch-organization, switch-project, usage-metrics, user, view, web-analytics-weekly-digest, workflows.
 
 **Query-\* domains:** error-tracking-issue(s)(-events)(-list), funnel, lifecycle(-actors), llm-trace(s-list), logs, paths, retention, session-recordings-list, stickiness, trends(-actors).
 
-Per the MCP instructions: **prioritize skills over tools** when both apply. Tool schemas are deferred — load with `ToolSearch` (e.g. `select:mcp__69da6aa2-a3df-4104-9a26-fdc28f53eacf__exec`) before invoking.
+Per the MCP instructions: **prioritize skills over tools** when both apply. Tool schemas are deferred — load with `ToolSearch` (e.g. `select:mcp__claude_ai_PostHog__exec` locally, or `select:mcp__69da6aa2-a3df-4104-9a26-fdc28f53eacf__exec` on web) before invoking.
 
 ## Naming
 
