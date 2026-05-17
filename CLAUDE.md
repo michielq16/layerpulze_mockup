@@ -137,14 +137,32 @@ You don't run LP-side commands — operator does. Structure your output so they 
 
 ## Delivery protocol — always open a PR and link the preview
 
-**What you actually have:** push access to feature branches. **No CI/CD on your side, no auto-deploy, no auto-merge** — but the operator has confirmed Vercel auto-deploys this repo to a project the MCP token can't enumerate directly. Don't try to look it up via Vercel MCP; the project lives in a scope your token only sees in part. The URL pattern below was confirmed by the operator on 2026-05-17.
+**What you actually have:** push access to feature branches. **No auto-deploy from your side, no auto-merge** — but Vercel auto-deploys this repo on every branch push. Local Claude Code sessions can verify deployments directly via Vercel CLI (see below); web-container sessions have an MCP scope gap (claude.ai Vercel MCP token was OAuth-authorized for `layerpulse` only, not the mockup) and must fall back to scraping the PR's Vercel bot comment.
 
 **Vercel scope (confirmed):**
-- Project: `layerpulze-mockup` (note: historical "z" spelling, not "layerpulse-mockup")
-- Team slug: `michielq-7337s-projects`
+- Project: `layerpulze-mockup` (id `prj_ANu3cNEjsVgJ7E5pRHu0O3mGvpc5`; historical "z" spelling, not "layerpulse-mockup")
+- Team slug: `michielq-7337s-projects` (id `team_kVlNT7LAojMeGLLRlFYQgASX`)
 - Production alias: `https://layerpulze-mockup.vercel.app/<route>` (tracks `main`)
-- Branch preview alias: `https://layerpulze-mockup-git-<branch-slug>-michielq-7337s-projects.vercel.app/<route>` — Vercel slugifies the branch name (slashes → hyphens, truncated to ~20 chars + hash if needed). For `claude/review-document-structure-26rnC` this resolves to something like `layerpulze-mockup-git-claude-review-document-stru-<hash>-michielq-7337s-projects.vercel.app`
-- Per-deployment URL: `https://layerpulze-mockup-<deployId>-michielq-7337s-projects.vercel.app/<route>` — most reliable form; ask the operator for the URL from the PR's Vercel bot comment if you don't have one
+- Branch preview alias: `https://layerpulze-mockup-git-<branch-slug>-michielq-7337s-projects.vercel.app/<route>` — Vercel slugifies the branch name (slashes → hyphens, truncated to ~20 chars + hash if needed). Stable across pushes to the same branch.
+- Per-deployment URL: `https://layerpulze-mockup-<deployId>-michielq-7337s-projects.vercel.app/<route>` — rotates per commit, most reliable for confirming a specific build.
+
+**Local Vercel CLI (the reliable verification interface):**
+
+The repo is linked to the mockup project via `.vercel/project.json` (gitignored). One-time setup on each fresh checkout:
+
+```powershell
+$env:NODE_OPTIONS = '--use-system-ca'           # required on Windows — corporate root CA fix
+vercel link --yes --project layerpulze-mockup --scope michielq-7337s-projects
+```
+
+Then per-session, prepend `$env:NODE_OPTIONS = '--use-system-ca';` to any `vercel` command (otherwise TLS verification fails with "unable to verify the first certificate"). Useful commands after linking:
+
+- `vercel ls` — latest deployments (preview + production, per-deploy URLs, status)
+- `vercel inspect <deploy-url>` — build metadata + commit SHA
+- `vercel logs <deploy-url>` — build / runtime logs when a deploy fails
+- `vercel whoami` — sanity check auth
+
+**MCP scope gap mitigation (optional):** If you want the claude.ai Vercel MCP to also see this project (saves the CLI ceremony in future sessions), the operator can re-authorize the integration at `vercel.com → Integrations → claude.ai → Configure → Add Projects` and add `layerpulze-mockup`.
 
 **The flow:**
 
