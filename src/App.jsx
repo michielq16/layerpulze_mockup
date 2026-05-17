@@ -9,6 +9,7 @@ import { Alerts, Settings, DrillSheet, TweaksPanel } from './Pages';
 import { Documents, Governance, Activity } from './NewPages';
 import { Users, UserDetail } from './UserIntel';
 import { UsersNew } from './UsersNew';
+import { TenantActivity } from './TenantActivity';
 import { Adoption, Sleepers, Audit } from './UserIntel2';
 import { Licenses } from './Licenses';
 import { ReportsApps } from './ReportsApps';
@@ -72,7 +73,8 @@ export default function App() {
     if (top === 'settings')   return [{ label: 'Settings' }];
     if (top === 'documents')  return [{ label: 'Documents' }];
     if (top === 'governance') return [{ label: 'Governance' }];
-    if (top === 'activity')   return [{ label: 'Activity' }];
+    if (top === 'activity')   return [{ label: 'Activity (LP audit)' }];
+    if (top === 'tenant-activity') return [{ label: 'Tenant Activity (forensic)' }];
     if (top === 'adoption')   return [{ label: 'Adoption' }];
     if (top === 'sleepers')   return [{ label: 'Sleepers' }];
     if (top === 'audit')      return [{ label: 'Audit & Compliance' }];
@@ -125,6 +127,7 @@ export default function App() {
     else          page = <Users onOpenUser={(id) => setRoute('users/' + id)}/>;
   }
   else if (top === 'users-new') page = <UsersNew onOpenLegacyUser={() => setRoute('users')}/>;
+  else if (top === 'tenant-activity') page = <TenantActivity onOpenUser={(id) => setRoute('users-new')}/>;
   else if (top === 'workspaces') {
     if (modelId)   page = <ModelView wsId={wsId} modelId={modelId} onBack={() => setRoute('workspaces/' + wsId)}/>;
     else if (wsId) page = <WorkspaceDetail wsId={wsId} onBack={() => setRoute('workspaces')} onOpenModel={(ws, m) => setRoute('workspaces/' + ws + '/' + m)}/>;
