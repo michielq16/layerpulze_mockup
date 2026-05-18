@@ -99,7 +99,7 @@ Locked components: `StatCard` (sky / violet / emerald / amber / rose tones + opt
 
 ## Microsoft Fabric vocabulary — assume + speak
 
-CU (Capacity Units), F-SKU tiers (F2…F2048), semantic models (≠ "Power BI datasets" in Fabric), DAX (CALCULATE / FILTER / SUMMARIZE), workspaces, Activity Events (`/admin/activityevents`, 1h windows, 30d retention), Refreshables, Capacity Metrics App (LP queries via DAX direct, replaces FUAM), Tenant Settings (200+ Power Platform switches), Export*/OffHoursAccess/RLS = SOC 2 trifecta, per-workspace roles (Member/Admin/Contributor/Viewer).
+CU (Capacity Units), F-SKU tiers (F2…F2048), semantic models (≠ "Power BI datasets" in Fabric), DAX (CALCULATE / FILTER / SUMMARIZE), workspaces, Activity Events (`/admin/activityevents`, 1h windows, 30d retention), Refreshables, Capacity Metrics App (LP queries via DAX direct), Tenant Settings (200+ Power Platform switches), Export*/OffHoursAccess/RLS = SOC 2 trifecta, per-workspace roles (Member/Admin/Contributor/Viewer).
 
 ## Anti-patterns — DO NOT design
 

@@ -2043,3 +2043,81 @@ select.input { height: 34px; padding: 0 28px 0 12px; }
 .plan-tier-cta .btn { width: 100%; justify-content: center; }
 
 .plan-history { padding: 14px 16px; }
+
+/* ─── Settings: ingestion health grid + danger zone ─────────────── */
+
+/* Run-history cell (small square) */
+.ing-cell {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  border: 1px solid oklch(1 0 0 / 0.05);
+  margin: 0;
+  flex-shrink: 0;
+}
+.ing-cell.ing-cell-ok      { background: oklch(0.58 0.15 150); }
+.ing-cell.ing-cell-partial { background: oklch(0.65 0.18 65); }
+.ing-cell.ing-cell-fail    { background: oklch(0.55 0.22 25); }
+.ing-cell.ing-cell-pending { background: oklch(0.88 0.005 250); }
+
+/* Overall 30-cell grid in the Data Ingestion card */
+.ing-overall-grid {
+  display: flex; gap: 4px;
+  padding: 8px 0 4px;
+  flex-wrap: wrap;
+}
+.ing-overall-grid .ing-cell { width: 22px; height: 22px; border-radius: 4px; }
+
+.ing-legend {
+  display: flex; gap: 14px;
+  font-size: 11px; color: var(--muted-foreground);
+  padding: 6px 0 12px;
+  border-bottom: 1px solid var(--border);
+}
+.ing-legend-item {
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.ing-legend-item .ing-cell { width: 10px; height: 10px; border-radius: 2px; }
+
+/* Per-arm grid table */
+.ing-arms { display: flex; flex-direction: column; }
+.ing-arms-head, .ing-arms-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(280px, 2fr) 90px minmax(180px, 1.4fr);
+  gap: 14px;
+  align-items: center;
+  padding: 10px 0;
+}
+.ing-arms-head {
+  font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+}
+.ing-arms-row { border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.ing-arms-row:last-child { border-bottom: 0; }
+.ing-arms-name { display: flex; align-items: center; gap: 9px; font-weight: 500; }
+.ing-arms-cells { display: flex; gap: 3px; flex-wrap: wrap; }
+.ing-arms-cells .ing-cell { width: 11px; height: 11px; border-radius: 2px; }
+.ing-arms-pct { font-size: 13px; font-weight: 600; }
+.ing-arms-meta { font-size: 11px; }
+
+/* Danger zone */
+.settings-danger {
+  background: oklch(0.99 0.02 25);
+  border: 1px solid oklch(0.78 0.10 25);
+  padding: 16px 18px;
+}
+.dark .settings-danger { background: oklch(0.18 0.03 25); border-color: oklch(0.45 0.15 25); }
+.settings-danger-head {
+  display: flex; align-items: center; gap: 8px;
+  color: oklch(0.50 0.20 25); font-weight: 600; font-size: 13px;
+  margin-bottom: 4px;
+}
+.dark .settings-danger-head { color: oklch(0.82 0.18 25); }
+.settings-danger-body { margin-bottom: 14px; }
+.settings-danger-actions { display: flex; gap: 8px; justify-content: flex-start; }
+.settings-danger-cta {
+  background: oklch(0.55 0.22 25);
+  color: white;
+}
+.settings-danger-cta:hover { background: oklch(0.48 0.22 25); transform: translateY(-1px); box-shadow: var(--shadow-sm); }

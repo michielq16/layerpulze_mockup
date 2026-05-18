@@ -174,16 +174,19 @@ function ConnectionTab() {
         </details>
       </div>
 
-      {/* FUAM (legacy, optional) */}
-      <div className="lp-card settings-deprecated">
-        <div className="lp-card-header">
-          <div>
-            <div className="lp-card-title">FUAM workspace <span className="badge badge-outline" style={{ fontSize: 9.5, marginLeft: 6 }}>LEGACY</span></div>
-            <div className="lp-card-sub">FUAM is being phased out in favor of the Capacity Metrics App. Leave blank unless explicitly directed.</div>
-          </div>
+      {/* Danger zone — destructive ops live under Connection (this is where the SP attaches the tenant) */}
+      <div className="lp-card settings-danger">
+        <div className="settings-danger-head">
+          <Icon name="alert-triangle" size={14}/>
+          <span>Danger zone</span>
         </div>
-        <div className="form-grid">
-          <label>FUAM workspace<input className="input" defaultValue="FUAM-Prod" placeholder="(empty — using Capacity Metrics App)"/></label>
+        <div className="settings-danger-body">
+          <div className="settings-row-label">Delete this environment</div>
+          <div className="settings-row-sub">Permanently delete this environment, its workspaces, models, capacities, and all collected metrics. This cannot be undone. The Fabric tenant itself is not affected.</div>
+        </div>
+        <div className="settings-danger-actions">
+          <button className="btn btn-outline btn-sm">Export environment first</button>
+          <button className="btn btn-sm settings-danger-cta">Delete environment</button>
         </div>
       </div>
     </div>
@@ -191,10 +194,80 @@ function ConnectionTab() {
 }
 
 // ── Tab 2: Ingestion ─────────────────────────────────────────────────
+// Each arm has a per-run history (last N scheduled runs). Outcomes: ok / partial / fail / pending.
+// Rolls up to an aggregate "97% completion · 28/30 ok" summary + a 30-square health grid.
+const RUN_TONE = {
+  ok:      { bg: 'oklch(0.58 0.15 150)', label: 'OK'      },
+  partial: { bg: 'oklch(0.65 0.18 65)',  label: 'Partial' },
+  fail:    { bg: 'oklch(0.55 0.22 25)',  label: 'Failed'  },
+  pending: { bg: 'oklch(0.85 0.005 250)',label: 'Pending' },
+};
+
+// Pseudo-random outcome per (arm, day) — stable per seed.
+function runOutcome(seed, i) {
+  let h = 2166136261; const s = seed + '·' + i;
+  for (let k = 0; k < s.length; k++) h = Math.imul(h ^ s.charCodeAt(k), 16777619);
+  const r = (h >>> 0) % 100;
+  if (r < 92) return 'ok';
+  if (r < 97) return 'partial';
+  return 'fail';
+}
+
+// Build N runs of history for an arm.
+function buildHistory(seed, n) {
+  return Array.from({ length: n }, (_, i) => runOutcome(seed, n - 1 - i));
+}
+
+function RunGrid({ runs, label }) {
+  const okCount   = runs.filter(r => r === 'ok').length;
+  const partial   = runs.filter(r => r === 'partial').length;
+  const failed    = runs.filter(r => r === 'fail').length;
+  const completion = Math.round((okCount / runs.length) * 100);
+  return (
+    <div className="ing-grid-row">
+      <div className="ing-grid-cells">
+        {runs.map((r, i) => (
+          <span key={i} className={'ing-cell ing-cell-' + r}
+                title={`Run ${i + 1} of ${runs.length} · ${RUN_TONE[r].label}`}
+                style={{ background: RUN_TONE[r].bg }}/>
+        ))}
+      </div>
+      <div className="ing-grid-summary">
+        <span className="ing-grid-pct mono">{completion}%</span>
+        <span className="ing-grid-detail muted">
+          {okCount} ok{partial > 0 ? ` · ${partial} partial` : ''}{failed > 0 ? ` · ${failed} failed` : ''}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+const INGEST_ARMS = [
+  { key: 'metrics',     name: 'Metrics App (DAX)',  meta: 'MetricsByItemAndHour · 11.2s' },
+  { key: 'activity',    name: 'Activity events',    meta: '1,284 events / 24h'           },
+  { key: 'refreshables',name: 'Refreshables',       meta: '47 datasets tracked · 6.4s'   },
+  { key: 'tenant',      name: 'Tenant settings',    meta: '160 settings · daily diff'    },
+  { key: 'cost',        name: 'Cost calc (cron)',   meta: 'cost_observations_v2 · 6.4s'  },
+];
+
 function IngestionTab() {
-  const [syncOn, setSyncOn] = React.useState(true);
+  const [syncOn, setSyncOn]     = React.useState(true);
   const [schedule, setSchedule] = React.useState('daily');
   const [timezone, setTimezone] = React.useState('Amsterdam (NL)');
+
+  // Build 30-run history per arm + overall (combined daily completion).
+  const armHistory = INGEST_ARMS.map(a => ({ ...a, runs: buildHistory(a.key, 30) }));
+  const overall    = Array.from({ length: 30 }, (_, i) => {
+    const day = armHistory.map(a => a.runs[i]);
+    if (day.every(o => o === 'ok')) return 'ok';
+    if (day.some(o => o === 'fail')) return 'fail';
+    return 'partial';
+  });
+  const okCount  = overall.filter(o => o === 'ok').length;
+  const partial  = overall.filter(o => o === 'partial').length;
+  const failed   = overall.filter(o => o === 'fail').length;
+  const overallPct = Math.round((okCount / overall.length) * 100);
+  const allHealthy = failed === 0 && partial <= 1;
 
   return (
     <div className="settings-tab fade-in d3">
@@ -204,6 +277,9 @@ function IngestionTab() {
             <div className="lp-card-title">Data ingestion</div>
             <div className="lp-card-sub">Sync your Fabric tenant on a schedule. Pause to stop auto-syncing without removing credentials.</div>
           </div>
+          <span className={'badge ' + (allHealthy ? 'tone-emerald-soft' : failed > 0 ? 'tone-rose-soft' : 'tone-amber-soft')}>
+            {allHealthy ? 'Healthy' : failed > 0 ? `${failed} failed runs` : `${partial} partial runs`}
+          </span>
         </div>
 
         <div className="settings-row">
@@ -222,7 +298,7 @@ function IngestionTab() {
             <div className="settings-row-label">Schedule</div>
             <div className="settings-row-sub">All syncs run at 02:00 in the timezone set below.</div>
           </div>
-          <select className="input input-sm" value={schedule} onChange={e => setSchedule(e.target.value)} style={{ minWidth: 140 }}>
+          <select className="input input-sm" value={schedule} onChange={e => setSchedule(e.target.value)} style={{ minWidth: 160 }}>
             <option value="hourly">Hourly</option>
             <option value="6h">Every 6 hours</option>
             <option value="daily">Daily</option>
@@ -230,7 +306,30 @@ function IngestionTab() {
           </select>
         </div>
 
-        <div className="settings-row settings-row-last">
+        {/* Overall 30-day completion grid */}
+        <div className="settings-row">
+          <div className="settings-row-main">
+            <div className="settings-row-label">Last 30 scheduled runs · <b className="mono">{overallPct}% completion</b></div>
+            <div className="settings-row-sub">{okCount} ok · {partial} partial · {failed} failed. Each cell = one daily run, oldest left → newest right.</div>
+          </div>
+        </div>
+        <div className="ing-overall-grid">
+          {overall.map((r, i) => (
+            <span key={i} className={'ing-cell ing-cell-' + r}
+                  title={`Run ${i + 1}/30 · ${RUN_TONE[r].label}`}
+                  style={{ background: RUN_TONE[r].bg }}/>
+          ))}
+        </div>
+        <div className="ing-legend">
+          {Object.entries(RUN_TONE).filter(([k]) => k !== 'pending').map(([k, t]) => (
+            <span key={k} className="ing-legend-item">
+              <span className="ing-cell" style={{ background: t.bg }}/>
+              {t.label}
+            </span>
+          ))}
+        </div>
+
+        <div className="settings-row settings-row-last" style={{ marginTop: 6 }}>
           <div className="settings-row-main">
             <div className="settings-row-label">Last sync: <b>11h ago</b></div>
             <div className="settings-row-sub mono">1,652 models · 1,008,160 events · next run in ~13h</div>
@@ -239,28 +338,43 @@ function IngestionTab() {
         </div>
       </div>
 
+      {/* Per-arm health w/ 14-run mini-grid */}
       <div className="lp-card">
         <div className="lp-card-header">
           <div>
-            <div className="lp-card-title">Per-arm sync status</div>
-            <div className="lp-card-sub">LayerPulse pulls each axis on its own schedule. Failures isolate to one arm.</div>
+            <div className="lp-card-title">Per-arm health · last 30 runs</div>
+            <div className="lp-card-sub">LayerPulse pulls each axis on its own schedule. Failures isolate to one arm — the grid shows you exactly where the gap is.</div>
           </div>
-          <span className="badge tone-emerald-soft">All healthy</span>
         </div>
-        {[
-          { arm: 'FUAM lakehouse',        status: 'ok',   meta: 'last 4m · next ~26m' },
-          { arm: 'Metrics App (DAX)',     status: 'ok',   meta: 'MetricsByItemAndHour · 11.2s' },
-          { arm: 'Activity events',       status: 'ok',   meta: '1,284 events / 24h' },
-          { arm: 'Refreshables',          status: 'ok',   meta: '47 datasets tracked · 6.4s' },
-          { arm: 'Tenant settings',       status: 'ok',   meta: '160 settings · daily diff' },
-          { arm: 'Cost calc (cron)',      status: 'ok',   meta: 'cost_observations_v2 · 6.4s' },
-        ].map(r => (
-          <div key={r.arm} className="arm-row">
-            <span className={'arm-dot status-' + r.status}/>
-            <span className="arm-name">{r.arm}</span>
-            <span className="arm-meta mono">{r.meta}</span>
+        <div className="ing-arms">
+          <div className="ing-arms-head">
+            <div>Arm</div>
+            <div>Last 30 runs</div>
+            <div>Completion</div>
+            <div>Detail</div>
           </div>
-        ))}
+          {armHistory.map(a => {
+            const armOk = a.runs.filter(r => r === 'ok').length;
+            const armPct = Math.round((armOk / a.runs.length) * 100);
+            return (
+              <div key={a.key} className="ing-arms-row">
+                <div className="ing-arms-name">
+                  <span className={'arm-dot status-' + (armPct === 100 ? 'ok' : armPct >= 90 ? 'warn' : 'fail')}/>
+                  {a.name}
+                </div>
+                <div className="ing-arms-cells">
+                  {a.runs.map((r, i) => (
+                    <span key={i} className={'ing-cell ing-cell-' + r}
+                          title={`Run ${i + 1}/30 · ${RUN_TONE[r].label}`}
+                          style={{ background: RUN_TONE[r].bg }}/>
+                  ))}
+                </div>
+                <div className="mono ing-arms-pct">{armPct}%</div>
+                <div className="mono muted ing-arms-meta">{a.meta}</div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="lp-card">

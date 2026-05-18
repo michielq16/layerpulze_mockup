@@ -122,7 +122,7 @@ const DATA = {
   workspaceDetail: {
     'finance-prod': {
       name: 'Finance-Prod', env: 'PROD',
-      subtitle: 'Owned by M. Qureshi · 8 models · connected via FUAM-Prod',
+      subtitle: 'Owned by M. Qureshi · 8 models · connected via Capacity Metrics App',
       models: [
         { id: 'sales-analytics', name: 'Sales Analytics',   tables: 12, measures: 42, scanned: '3d ago',  score: 9.2, tone: 'emerald' },
         { id: 'budget-planning', name: 'Budget Planning',   tables: 8,  measures: 15, scanned: '—',       score: null },
