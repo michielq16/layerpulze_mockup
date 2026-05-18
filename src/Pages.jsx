@@ -242,12 +242,16 @@ function RunGrid({ runs, label }) {
   );
 }
 
+// Five canonical LP collector arms — see Obsidian: docs/architecture/metrics-app-model.md,
+// runbooks/sp-onboarding.md, audits/collector-atomicity-audit-2026-05-11.md,
+// prd/{activity-events-atomic-ingestion,governance-pillar-section-b,settings-cron-controls}.md.
+// Run nightly via Promise.allSettled — failure-isolated per axis.
 const INGEST_ARMS = [
-  { key: 'metrics',     name: 'Metrics App (DAX)',  meta: 'MetricsByItemAndHour · 11.2s' },
-  { key: 'activity',    name: 'Activity events',    meta: '1,284 events / 24h'           },
-  { key: 'refreshables',name: 'Refreshables',       meta: '47 datasets tracked · 6.4s'   },
-  { key: 'tenant',      name: 'Tenant settings',    meta: '160 settings · daily diff'    },
-  { key: 'cost',        name: 'Cost calc (cron)',   meta: 'cost_observations_v2 · 6.4s'  },
+  { key: 'activity',     name: 'Activity events',           meta: '/admin/activityevents · 24×1h · 1,284 events / 24h' },
+  { key: 'metrics',      name: 'Capacity Metrics App (DAX)', meta: 'MetricsByItemAndHour · 41 tables · 147 measures'   },
+  { key: 'refreshables', name: 'Refreshables',              meta: '/admin/capacities/refreshables · 47 datasets'      },
+  { key: 'tenant',       name: 'Tenant settings',           meta: '/v1/admin/tenantsettings · 160 settings'            },
+  { key: 'scanner',      name: 'Model introspection',       meta: 'Scanner API · getInfo · Silver fidelity'            },
 ];
 
 function IngestionTab() {
@@ -298,7 +302,7 @@ function IngestionTab() {
             <div className="settings-row-label">Schedule</div>
             <div className="settings-row-sub">All syncs run at 02:00 in the timezone set below. Pick a daily cadence, a specific weekday, or a custom cron expression.</div>
           </div>
-          <select className="input input-sm" value={schedule} onChange={e => setSchedule(e.target.value)} style={{ minWidth: 200 }}>
+          <select className="input input-sm" value={schedule} onChange={e => setSchedule(e.target.value)} style={{ width: 240, flexShrink: 0 }}>
             <option value="daily">Daily</option>
             <option value="weekly-mon">Weekly on Monday</option>
             <option value="weekly-tue">Weekly on Tuesday</option>

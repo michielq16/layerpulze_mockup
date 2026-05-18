@@ -2083,7 +2083,7 @@ select.input { height: 34px; padding: 0 28px 0 12px; }
 .ing-arms { display: flex; flex-direction: column; }
 .ing-arms-head, .ing-arms-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1.2fr) minmax(280px, 2fr) 90px minmax(180px, 1.4fr);
+  grid-template-columns: minmax(210px, 1fr) 360px 80px minmax(240px, 1.5fr);
   gap: 14px;
   align-items: center;
   padding: 10px 0;
