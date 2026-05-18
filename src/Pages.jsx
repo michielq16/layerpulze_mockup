@@ -335,6 +335,39 @@ function IngestionTab() {
           </div>
         )}
 
+        {/* Timezone — folded into Data ingestion card, right after Schedule (the schedule sub-text says "in the timezone set below"). */}
+        <div className="settings-row">
+          <div className="settings-row-main">
+            <div className="settings-row-label">Timezone</div>
+            <div className="settings-row-sub">Used for off-hours bucketing (09:00–18:00 local), refresh scheduling, and audit timestamps in your local view. Auditor surfaces always render in UTC.</div>
+          </div>
+          <select className="input input-sm" value={timezone} onChange={e => setTimezone(e.target.value)} style={{ width: 240, flexShrink: 0 }}>
+            <optgroup label="Americas">
+              <option>Los Angeles (PT)</option>
+              <option>Denver (MT)</option>
+              <option>Chicago (CT)</option>
+              <option>New York (ET)</option>
+              <option>São Paulo (BRT)</option>
+            </optgroup>
+            <optgroup label="Europe">
+              <option>London (UK)</option>
+              <option>Amsterdam (NL)</option>
+              <option>Berlin (DE)</option>
+              <option>Paris (FR)</option>
+              <option>Stockholm (SE)</option>
+            </optgroup>
+            <optgroup label="Asia-Pacific">
+              <option>Singapore (SGT)</option>
+              <option>Hong Kong (HKT)</option>
+              <option>Tokyo (JST)</option>
+              <option>Sydney (AEDT)</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option>UTC</option>
+            </optgroup>
+          </select>
+        </div>
+
         {/* Overall 30-day completion grid */}
         <div className="settings-row">
           <div className="settings-row-main">
@@ -440,43 +473,6 @@ function IngestionTab() {
         </div>
       </div>
 
-      <div className="lp-card">
-        <div className="lp-card-header">
-          <div>
-            <div className="lp-card-title">Timezone</div>
-            <div className="lp-card-sub">Used for off-hours bucketing (09:00–18:00 local), refresh scheduling, and audit timestamps in your local view. Auditor surfaces always render in UTC.</div>
-          </div>
-        </div>
-        <div className="form-grid form-grid-single">
-          <label>Working timezone
-            <select className="input" value={timezone} onChange={e => setTimezone(e.target.value)}>
-              <optgroup label="Americas">
-                <option>Los Angeles (PT)</option>
-                <option>Denver (MT)</option>
-                <option>Chicago (CT)</option>
-                <option>New York (ET)</option>
-                <option>São Paulo (BRT)</option>
-              </optgroup>
-              <optgroup label="Europe">
-                <option>London (UK)</option>
-                <option>Amsterdam (NL)</option>
-                <option>Berlin (DE)</option>
-                <option>Paris (FR)</option>
-                <option>Stockholm (SE)</option>
-              </optgroup>
-              <optgroup label="Asia-Pacific">
-                <option>Singapore (SGT)</option>
-                <option>Hong Kong (HKT)</option>
-                <option>Tokyo (JST)</option>
-                <option>Sydney (AEDT)</option>
-              </optgroup>
-              <optgroup label="Other">
-                <option>UTC</option>
-              </optgroup>
-            </select>
-          </label>
-        </div>
-      </div>
     </div>
   );
 }
