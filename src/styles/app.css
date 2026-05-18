@@ -1619,12 +1619,23 @@ select.input { height: 34px; padding: 0 28px 0 12px; }
 /* Section head matches the design standard: title left, FILTER BY ... eyebrow right */
 .ws-section-head .lp-eyebrow { font-size: 10.5px; letter-spacing: 0.1em; }
 
-/* Single-row filter card (operator preference 2026-05-18) */
+/* Single-row filter card — matches the original "Image 14" base + Sort/View additions */
 .ws-search { flex: 1; min-width: 220px; }
 
-/* Sort dropdown + view toggle hug the right edge of the row */
-.ws-filter-row .ws-sort-wrap   { margin-left: auto; }
+/* Env chips cluster + sort + view-toggle all hug the right edge */
+.ws-filter-row .ws-env-chips   { margin-left: auto; }
+.ws-filter-row .ws-sort-wrap   { flex-shrink: 0; }
 .ws-filter-row .ws-view-toggle { flex-shrink: 0; }
+
+/* Z-INDEX FIX: the filter card creates its own stacking context above the workspace grid below, */
+/* so dropdown popovers render on top of cards (even when cards have transform-on-hover). */
+.ws-filter-card { position: relative; z-index: 30; overflow: visible; }
+.ws-cap-pop, .ws-sort-pop { z-index: 60; }
+
+/* Capacity selector in page-head (top-right, alongside Sync / Connect actions) */
+.ws-head-actions { display: flex; gap: 8px; align-items: center; }
+.ws-cap-wrap-head .ws-cap-btn { min-width: 180px; height: 32px; }
+.ws-cap-pop-right { left: auto !important; right: 0; }
 
 /* Env chips — slightly tighter spacing, env dots colored */
 .ws-env-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }

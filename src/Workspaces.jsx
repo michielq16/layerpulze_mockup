@@ -89,32 +89,9 @@ export function Workspaces({ onOpen }) {
           <h1 className="lp-page-title">Workspaces</h1>
           <p className="lp-page-sub">Every Fabric workspace in this tenant — scoped by capacity, ranked by health. Click any to drill into models, reports, and cost.</p>
         </div>
-        <div className="fade-in d2" style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-outline btn-sm"><Icon name="refresh" size={14}/>Sync workspaces</button>
-          <button className="btn btn-sm"><Icon name="plus" size={14}/>Connect capacity</button>
-        </div>
-      </div>
-
-      {/* 5-KPI strip — Workspaces · Models · Health · Total Cost · Potential Wasted */}
-      <div className="ws-grid-5 fade-in">
-        <StatCard label="Workspaces"     value={scoped.length}              sub={capacityId === 'all' ? 'across portfolio' : selectedCap?.name} icon="folders" tone="sky"/>
-        <StatCard label="Semantic Models" value={scopedModels}              sub={scopedReports + ' reports'}                                    icon="database" tone="violet"/>
-        <HealthScoreCard health={summary.health}/>
-        <StatCard label="Total Cost · Est." value={'$' + (scopedTotal / 1000).toFixed(1) + 'k'} unit="/mo" sub={'$' + scopedCapCost.toLocaleString() + ' capacity + $' + scopedLicCost.toLocaleString() + ' licenses'} icon="dollar" tone="emerald"/>
-        <StatCard label="Potential Wasted" value={'$' + scopedWaste.toLocaleString()} unit="/mo" sub={summary.wastedSpend.sources.length + ' optimization opportunities'} icon="trend-down" tone="amber"/>
-      </div>
-
-      {/* Section head — Browse N of N · eyebrow microcopy on the right (matches design standard) */}
-      <div className="lp-section-head ws-section-head" style={{ marginTop: 22 }}>
-        <h2>Browse <span className="count">{items.length} of {scoped.length}</span></h2>
-        <span className="lp-eyebrow">FILTER BY CAPACITY, ENVIRONMENT, OR NAME</span>
-      </div>
-
-      {/* Single-row filter bar: Capacity · Search · Env pills · Starred · Sort · View toggle */}
-      <div className="lp-card lp-card-flush ws-filter-card fade-in d2">
-        <div className="ws-filter-row">
-          {/* Capacity selector (no redundant CAPACITY label — the button text is self-evident) */}
-          <div className="ws-cap-wrap">
+        <div className="fade-in d2 ws-head-actions">
+          {/* Capacity selector — page-scope, top-right (matches /capacity + /costs) */}
+          <div className="ws-cap-wrap ws-cap-wrap-head">
             <button className={'ws-cap-btn' + (capOpen ? ' open' : '')} onClick={() => { setCapOpen(o => !o); setSortOpen(false); }}>
               <span className={'ws-cap-dot' + (capacityId === 'all' ? '' : ' active')}/>
               <span className="ws-cap-name">{capacityId === 'all' ? 'All capacities' : selectedCap?.name}</span>
@@ -123,7 +100,7 @@ export function Workspaces({ onOpen }) {
               <Icon name="chevron-down" size={12}/>
             </button>
             {capOpen && (
-              <div className="ws-cap-pop" onClick={e => e.stopPropagation()}>
+              <div className="ws-cap-pop ws-cap-pop-right" onClick={e => e.stopPropagation()}>
                 <div className="ws-cap-pop-head">CAPACITIES · {capacities.length}</div>
                 <button className={'ws-cap-pop-row' + (capacityId === 'all' ? ' active' : '')} onClick={() => { setCapId('all'); setCapOpen(false); }}>
                   <span className="ws-cap-pop-name">All capacities</span>
@@ -141,7 +118,29 @@ export function Workspaces({ onOpen }) {
               </div>
             )}
           </div>
+          <button className="btn btn-outline btn-sm"><Icon name="refresh" size={14}/>Sync workspaces</button>
+          <button className="btn btn-sm"><Icon name="plus" size={14}/>Connect capacity</button>
+        </div>
+      </div>
 
+      {/* 5-KPI strip — Workspaces · Models · Health · Total Cost · Potential Wasted */}
+      <div className="ws-grid-5 fade-in">
+        <StatCard label="Workspaces"     value={scoped.length}              sub={capacityId === 'all' ? 'across portfolio' : selectedCap?.name} icon="folders" tone="sky"/>
+        <StatCard label="Semantic Models" value={scopedModels}              sub={scopedReports + ' reports'}                                    icon="database" tone="violet"/>
+        <HealthScoreCard health={summary.health}/>
+        <StatCard label="Total Cost · Est." value={'$' + (scopedTotal / 1000).toFixed(1) + 'k'} unit="/mo" sub={'$' + scopedCapCost.toLocaleString() + ' capacity + $' + scopedLicCost.toLocaleString() + ' licenses'} icon="dollar" tone="emerald"/>
+        <StatCard label="Potential Wasted" value={'$' + scopedWaste.toLocaleString()} unit="/mo" sub={summary.wastedSpend.sources.length + ' optimization opportunities'} icon="trend-down" tone="amber"/>
+      </div>
+
+      {/* Section head — matches the original "Browse N matches" style */}
+      <div className="lp-section-head" style={{ marginTop: 22 }}>
+        <h2>Browse <span className="count">{items.length} matches</span></h2>
+      </div>
+
+      {/* Single-row filter bar: Search · Env pills · Starred · Sort · View toggle */}
+      {/* (Capacity selector lives in the page-head, top-right) */}
+      <div className="lp-card lp-card-flush ws-filter-card fade-in d2">
+        <div className="ws-filter-row">
           <div className="lp-search ws-search">
             <Icon name="search" size={14}/>
             <input placeholder="Search workspaces…" value={q} onChange={e => setQ(e.target.value)}/>
