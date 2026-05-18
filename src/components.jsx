@@ -239,6 +239,10 @@ export function Sidebar({ route, setRoute }) {
         ))}
       </nav>
       <div className="lp-nav-footer">
+        <button className={'lp-nav-item' + (top === 'billing' ? ' active' : '')} onClick={() => setRoute('billing')}
+                title={collapsed ? 'Billing' : undefined}>
+          <Icon name="credit-card" size={16}/><span className="lp-nav-label">Billing</span>
+        </button>
         <button className={'lp-nav-item' + (top === 'settings' ? ' active' : '')} onClick={() => setRoute('settings')}
                 title={collapsed ? 'Settings' : undefined}>
           <Icon name="settings" size={16}/><span className="lp-nav-label">Settings</span>

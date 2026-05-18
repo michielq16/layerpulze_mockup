@@ -6,6 +6,7 @@ import { Workspaces, WorkspaceDetail } from './Workspaces';
 import { ModelView } from './Model';
 import { Capacity, Costs } from './CostAttribution';
 import { Alerts, Settings, DrillSheet, TweaksPanel } from './Pages';
+import { Billing } from './Billing';
 import { Documents, Governance, Activity } from './NewPages';
 import { Users, UserDetail } from './UserIntel';
 import { UsersNew } from './UsersNew';
@@ -95,6 +96,7 @@ export default function App() {
     if (top === 'costs')      return [{ label: 'Cost & Usage' }];
     if (top === 'alerts')     return [{ label: 'Alerts' }];
     if (top === 'settings')   return [{ label: 'Settings' }];
+    if (top === 'billing')    return [{ label: 'Billing' }];
     if (top === 'documents')  return [{ label: 'Documents' }];
     if (top === 'governance') return [{ label: 'Governance' }];
     if (top === 'activity')   return [{ label: 'Activity (LP audit)' }];
@@ -137,6 +139,7 @@ export default function App() {
   else if (top === 'costs')     page = <Costs/>;
   else if (top === 'alerts')    page = <Alerts/>;
   else if (top === 'settings')  page = <Settings/>;
+  else if (top === 'billing')   page = <Billing/>;
   else if (top === 'documents')  page = <Documents/>;
   else if (top === 'governance') page = <Governance/>;
   else if (top === 'activity')   page = <Activity/>;
