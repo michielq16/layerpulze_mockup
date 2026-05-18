@@ -3,22 +3,63 @@ import Icon from './Icon';
 import DATA from './data';
 import { StatCard, EnvBadge } from './components';
 
+const SORT_OPTIONS = [
+  { key: 'cost-desc',    label: 'Most $/mo',        icon: 'dollar' },
+  { key: 'cost-asc',     label: 'Least $/mo',       icon: 'dollar' },
+  { key: 'models-desc',  label: 'Most models',      icon: 'database' },
+  { key: 'reports-desc', label: 'Most reports',     icon: 'file-text' },
+  { key: 'health-desc',  label: 'Best health',      icon: 'trend-up' },
+  { key: 'health-asc',   label: 'Worst health',     icon: 'trend-down' },
+  { key: 'scan-desc',    label: 'Recently scanned', icon: 'refresh' },
+  { key: 'name-asc',     label: 'Name A–Z',         icon: 'arrow-down' },
+];
+
+// "scanned" strings on workspaces are relative — parse roughly to days for sort.
+function scanAge(s) {
+  if (!s || s === '—') return 999;
+  const m = String(s).match(/^(\d+(?:\.\d+)?)\s*([hd])/i);
+  if (!m) return 0;
+  const n = parseFloat(m[1]);
+  return m[2].toLowerCase() === 'h' ? n / 24 : n;
+}
+
+function sortItems(items, sort) {
+  const a = [...items];
+  switch (sort) {
+    case 'cost-desc':    return a.sort((x, y) => (y.costPerMo || 0) - (x.costPerMo || 0));
+    case 'cost-asc':     return a.sort((x, y) => (x.costPerMo || 0) - (y.costPerMo || 0));
+    case 'models-desc':  return a.sort((x, y) => y.models - x.models);
+    case 'reports-desc': return a.sort((x, y) => (y.reports || 0) - (x.reports || 0));
+    case 'health-desc':  return a.sort((x, y) => (y.health ?? -1) - (x.health ?? -1));
+    case 'health-asc':   return a.sort((x, y) => (x.health ?? 999) - (y.health ?? 999));
+    case 'scan-desc':    return a.sort((x, y) => scanAge(x.scanned) - scanAge(y.scanned));
+    case 'name-asc':     return a.sort((x, y) => x.name.localeCompare(y.name));
+    default: return a;
+  }
+}
+
 export function Workspaces({ onOpen }) {
   const [q, setQ]               = React.useState('');
   const [env, setEnv]           = React.useState('all');
   const [capacityId, setCapId]  = React.useState('all');
   const [capOpen, setCapOpen]   = React.useState(false);
+  const [starredOnly, setStar]  = React.useState(false);
+  const [sort, setSort]         = React.useState('cost-desc');
+  const [sortOpen, setSortOpen] = React.useState(false);
+  const [viewMode, setViewMode] = React.useState('tile');
 
   const allItems   = DATA.workspaces.items;
   const capacities = DATA.workspaces.capacities;
   const summary    = DATA.workspaces.summary;
 
-  // Apply capacity + env + search filters.
-  const items = allItems.filter(w =>
+  // Apply capacity + env + starred + search filters, then sort.
+  const filtered = allItems.filter(w =>
     (capacityId === 'all' || w.capacityId === capacityId) &&
     (env === 'all' || w.env.toLowerCase() === env) &&
+    (!starredOnly || w.star) &&
     (q === '' || w.name.toLowerCase().includes(q.toLowerCase()))
   );
+  const items = sortItems(filtered, sort);
 
   // KPIs recalculate when the capacity filter narrows.
   const scoped = capacityId === 'all' ? allItems : allItems.filter(w => w.capacityId === capacityId);
@@ -27,12 +68,10 @@ export function Workspaces({ onOpen }) {
   const scopedCapCost = capacityId === 'all'
     ? capacities.reduce((s, c) => s + c.monthlyCost, 0)
     : (capacities.find(c => c.id === capacityId)?.monthlyCost || 0);
-  // License cost scales pro-rata with workspaces in scope (rough estimate for the mockup).
   const scopedLicCost = Math.round(summary.totalCost.licenseCost * (scoped.length / allItems.length));
   const scopedTotal   = scopedCapCost + scopedLicCost;
   const scopedWaste   = Math.round(summary.wastedSpend.value * (scoped.length / allItems.length));
 
-  // Env-bucket counts honor the capacity filter (matches your screenshot's "PROD 185 / UAT 162 / DEV 164" semantics).
   const envCounts = {
     all:  scoped.length,
     prod: scoped.filter(w => w.env === 'PROD').length,
@@ -40,7 +79,8 @@ export function Workspaces({ onOpen }) {
     dev:  scoped.filter(w => w.env === 'DEV').length,
   };
 
-  const selectedCap = capacities.find(c => c.id === capacityId);
+  const selectedCap  = capacities.find(c => c.id === capacityId);
+  const selectedSort = SORT_OPTIONS.find(s => s.key === sort);
 
   return (
     <>
@@ -64,18 +104,19 @@ export function Workspaces({ onOpen }) {
         <StatCard label="Potential Wasted" value={'$' + scopedWaste.toLocaleString()} unit="/mo" sub={summary.wastedSpend.sources.length + ' optimization opportunities'} icon="trend-down" tone="amber"/>
       </div>
 
-      <div className="lp-section-head" style={{ marginTop: 20 }}>
+      {/* Section head — Browse N of N · eyebrow microcopy on the right (matches design standard) */}
+      <div className="lp-section-head ws-section-head" style={{ marginTop: 22 }}>
         <h2>Browse <span className="count">{items.length} of {scoped.length}</span></h2>
-        <span className="lp-eyebrow">Filter by capacity, environment, or name</span>
+        <span className="lp-eyebrow">FILTER BY CAPACITY, ENVIRONMENT, OR NAME</span>
       </div>
 
-      {/* Filter bar — capacity selector + search + env pills */}
+      {/* Row 1: Capacity · Search · Env pills · Starred */}
       <div className="lp-card lp-card-flush ws-filter-card fade-in d2">
         <div className="ws-filter-row">
           {/* Capacity selector */}
           <div className="ws-cap-wrap">
             <span className="ws-cap-label">CAPACITY</span>
-            <button className={'ws-cap-btn' + (capOpen ? ' open' : '')} onClick={() => setCapOpen(o => !o)}>
+            <button className={'ws-cap-btn' + (capOpen ? ' open' : '')} onClick={() => { setCapOpen(o => !o); setSortOpen(false); }}>
               <span className={'ws-cap-dot' + (capacityId === 'all' ? '' : ' active')}/>
               <span className="ws-cap-name">{capacityId === 'all' ? 'All capacities' : selectedCap?.name}</span>
               {capacityId !== 'all' && selectedCap && <span className="badge badge-outline ws-cap-sku">{selectedCap.sku}</span>}
@@ -102,38 +143,121 @@ export function Workspaces({ onOpen }) {
             )}
           </div>
 
-          <div className="lp-search" style={{ flex: 1, minWidth: 240 }}>
+          <div className="lp-search ws-search">
             <Icon name="search" size={14}/>
             <input placeholder="Search workspaces…" value={q} onChange={e => setQ(e.target.value)}/>
           </div>
 
-          <div className="chip-row ws-env-chips">
+          <div className="ws-env-chips">
             {[['all','All','sky'],['prod','PROD','emerald'],['uat','UAT','amber'],['dev','DEV','violet']].map(([k, label, tone]) => (
-              <button key={k} className={'chip ws-env-chip ws-env-' + tone + (env === k ? ' active' : '')} onClick={() => setEnv(k)}>
+              <button key={k} className={'chip ws-env-chip' + (env === k ? ' active' : '')} onClick={() => setEnv(k)}>
                 <span className={'ws-env-dot tone-' + tone + '-solid'}/>
                 {label}<span className="count">{envCounts[k]}</span>
               </button>
             ))}
-            <button className="chip"><Icon name="star" size={12}/>Starred</button>
+            <button className={'chip ws-star-chip' + (starredOnly ? ' active' : '')} onClick={() => setStar(s => !s)}>
+              <Icon name="star" size={12}/>Starred
+            </button>
+          </div>
+        </div>
+
+        {/* Row 2: Sort · View toggle (right-aligned) */}
+        <div className="ws-filter-row ws-filter-controls">
+          <div className="ws-sort-wrap">
+            <button className={'ws-sort-btn' + (sortOpen ? ' open' : '')} onClick={() => { setSortOpen(o => !o); setCapOpen(false); }}>
+              <Icon name="sort" size={12}/>
+              <span>{selectedSort.label}</span>
+              <Icon name="chevron-down" size={11}/>
+            </button>
+            {sortOpen && (
+              <div className="ws-sort-pop" onClick={e => e.stopPropagation()}>
+                {SORT_OPTIONS.map(o => (
+                  <button key={o.key} className={'ws-sort-pop-row' + (sort === o.key ? ' active' : '')} onClick={() => { setSort(o.key); setSortOpen(false); }}>
+                    <Icon name={o.icon} size={12}/>
+                    <span>{o.label}</span>
+                    {sort === o.key && <Icon name="check" size={12}/>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="ws-view-toggle">
+            <button className={'ws-view-btn' + (viewMode === 'tile' ? ' active' : '')} onClick={() => setViewMode('tile')} title="Tile view" aria-label="Tile view">
+              <Icon name="grid" size={14}/>
+            </button>
+            <button className={'ws-view-btn' + (viewMode === 'list' ? ' active' : '')} onClick={() => setViewMode('list')} title="List view" aria-label="List view">
+              <Icon name="list-rows" size={14}/>
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="lp-grid-3">
-        {items.map((w, i) => (
-          <div key={w.id} className={'fade-in d' + ((i % 5) + 1)}>
-            <WorkspaceCardV2 ws={w} capacity={capacities.find(c => c.id === w.capacityId)} onClick={() => onOpen(w.id)}/>
-          </div>
-        ))}
-      </div>
-
-      {items.length === 0 && (
+      {items.length === 0 ? (
         <div className="empty" style={{ padding: 28 }}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>No workspaces match.</div>
-          <div style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>Loosen the capacity, environment, or search filter above.</div>
+          <div style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>Loosen the capacity, environment, sort, or search filter above.</div>
         </div>
+      ) : viewMode === 'tile' ? (
+        <div className="lp-grid-3">
+          {items.map((w, i) => (
+            <div key={w.id} className={'fade-in d' + ((i % 5) + 1)}>
+              <WorkspaceCardV2 ws={w} capacity={capacities.find(c => c.id === w.capacityId)} onClick={() => onOpen(w.id)}/>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <WorkspaceListView items={items} capacities={capacities} onOpen={onOpen} onToggleStar={() => {}}/>
       )}
     </>
+  );
+}
+
+function WorkspaceListView({ items, capacities, onOpen, onToggleStar }) {
+  return (
+    <div className="lp-card lp-card-flush fade-in">
+      <div className="ws-list-head">
+        <div></div>
+        <div>Workspace</div>
+        <div>Env</div>
+        <div>Models</div>
+        <div>Reports</div>
+        <div>$/mo</div>
+        <div>Capacity</div>
+        <div>Scanned</div>
+        <div></div>
+      </div>
+      {items.map(w => {
+        const cap = capacities.find(c => c.id === w.capacityId);
+        return (
+          <button key={w.id} className="ws-list-row" onClick={() => onOpen(w.id)}>
+            <button className={'ws-list-star' + (w.star ? ' on' : '')} onClick={e => { e.stopPropagation(); onToggleStar(w.id); }} aria-label="Star workspace">
+              <Icon name="star" size={13}/>
+            </button>
+            <div className="ws-list-name">
+              <span className="ws-list-name-icon" style={{
+                background: `var(--modern-icon-bg-${w.iconTone})`,
+                color:      `var(--modern-icon-fg-${w.iconTone})`,
+              }}>
+                <Icon name="folder" size={11}/>
+              </span>
+              {w.name}
+            </div>
+            <div><EnvBadge env={w.env}/></div>
+            <div className="mono ws-list-num">{w.models}</div>
+            <div className="mono ws-list-num">{w.reports}</div>
+            <div className="mono ws-list-cost">${w.costPerMo >= 1000 ? (w.costPerMo / 1000).toFixed(1) + 'k' : w.costPerMo}</div>
+            <div>{cap && <span className="badge badge-outline" style={{ fontSize: 10 }}>{cap.sku}</span>}</div>
+            <div className="ws-list-scan">
+              {w.scanCta
+                ? <span className="ws-list-scan-cta"><Icon name="zap" size={11}/>Scan now</span>
+                : <span className="mono muted">{w.scanned}</span>}
+            </div>
+            <Icon name="chevron-right" size={13} className="ws-list-arrow"/>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

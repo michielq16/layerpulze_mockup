@@ -1617,3 +1617,144 @@ select.input { height: 34px; padding: 0 28px 0 12px; }
 /* Workspace card v2 — add 3rd stat for $/mo, drop tables/measures */
 /* .ws-card / .ws-card-head / .ws-card-stats already styled in app.css; */
 /* the 3-column stat grid still fits when models/reports/$ replace models/tables/measures */
+
+/* ─── /workspaces v2 — cleaner filter layout + sort + list mode ── */
+
+/* Section head matches the design standard: title left, FILTER BY ... eyebrow right */
+.ws-section-head .lp-eyebrow { font-size: 10.5px; letter-spacing: 0.1em; }
+
+/* Filter card — two-row layout (filters · controls), no clutter */
+.ws-filter-card { padding: 12px 14px; margin-bottom: 14px; }
+.ws-filter-card .ws-filter-row + .ws-filter-row { margin-top: 10px; }
+.ws-filter-controls { justify-content: flex-end; }
+.ws-search { flex: 1; min-width: 240px; }
+
+/* Env chips — slightly tighter spacing, env dots colored */
+.ws-env-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.ws-env-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 10px;
+}
+.ws-star-chip { padding: 0 10px; }
+.ws-star-chip.active { background: oklch(0.96 0.07 78); border-color: oklch(0.65 0.18 75); color: oklch(0.46 0.15 65); }
+.ws-star-chip.active svg { color: oklch(0.65 0.18 75); fill: currentColor; }
+
+/* Sort pill — matches the Image 6 pattern */
+.ws-sort-wrap { position: relative; }
+.ws-sort-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 32px; padding: 0 12px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit; font-size: 12.5px; font-weight: 500;
+  color: var(--foreground);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.ws-sort-btn:hover { border-color: oklch(0.78 0.04 250); }
+.ws-sort-btn.open  { border-color: oklch(0.55 0.18 237); box-shadow: 0 0 0 3px oklch(0.69 0.17 237 / 0.15); }
+.ws-sort-btn > svg:first-child { color: var(--muted-foreground); }
+
+.ws-sort-pop {
+  position: absolute; top: 38px; right: 0; z-index: 20;
+  min-width: 200px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg, 0 8px 24px rgb(0 0 0 / 0.12));
+  padding: 4px;
+}
+.ws-sort-pop-row {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%; padding: 7px 10px;
+  background: transparent; border: 0; border-radius: 6px;
+  font-family: inherit; font-size: 12.5px;
+  cursor: pointer; text-align: left;
+  color: var(--foreground);
+}
+.ws-sort-pop-row:hover { background: var(--muted); }
+.ws-sort-pop-row.active { color: oklch(0.55 0.17 237); font-weight: 500; }
+.ws-sort-pop-row > span { flex: 1; min-width: 0; }
+.ws-sort-pop-row > svg:first-child { color: var(--muted-foreground); }
+.ws-sort-pop-row.active > svg:first-child { color: oklch(0.55 0.17 237); }
+
+/* View-mode toggle — 2 icons in a pill */
+.ws-view-toggle {
+  display: inline-flex;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.ws-view-btn {
+  display: grid; place-items: center;
+  width: 30px; height: 26px;
+  background: transparent; border: 0; border-radius: 5px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.ws-view-btn:hover { color: var(--foreground); }
+.ws-view-btn.active {
+  background: oklch(0.55 0.18 237);
+  color: white;
+}
+.dark .ws-view-btn.active { background: oklch(0.62 0.17 237); }
+
+/* List mode — dense row per workspace */
+.ws-list-head, .ws-list-row {
+  display: grid;
+  grid-template-columns: 36px minmax(220px, 1.4fr) 90px 80px 90px 90px 90px minmax(110px, 1fr) 24px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  font-size: 12.5px;
+  width: 100%;
+  text-align: left;
+}
+.ws-list-head {
+  font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border); background: var(--muted);
+}
+.ws-list-row {
+  border-bottom: 1px solid var(--border);
+  background: transparent; border-left: 0; border-right: 0; border-top: 0;
+  cursor: pointer;
+  transition: background 0.12s;
+  font-family: inherit;
+}
+.ws-list-row:last-child { border-bottom: 0; }
+.ws-list-row:hover { background: oklch(0.98 0.01 250); }
+.dark .ws-list-row:hover { background: oklch(0.20 0.02 250); }
+
+.ws-list-star {
+  display: grid; place-items: center;
+  width: 26px; height: 26px;
+  background: transparent; border: 0; border-radius: 6px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.ws-list-star:hover { background: var(--muted); color: var(--foreground); }
+.ws-list-star.on { color: oklch(0.65 0.18 75); }
+.ws-list-star.on svg { fill: currentColor; }
+
+.ws-list-name { display: flex; align-items: center; gap: 9px; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-list-name-icon {
+  width: 22px; height: 22px; border-radius: 5px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+
+.ws-list-num  { font-size: 13px; }
+.ws-list-cost { font-size: 13px; font-weight: 600; }
+.ws-list-scan { font-size: 11.5px; }
+.ws-list-scan-cta {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px;
+  background: oklch(0.95 0.05 237); color: oklch(0.45 0.15 237);
+  border-radius: 4px;
+  font-weight: 500; font-size: 10.5px;
+}
+.dark .ws-list-scan-cta { background: oklch(0.22 0.05 237); color: oklch(0.80 0.10 237); }
+
+.ws-list-arrow { color: var(--muted-foreground); }
