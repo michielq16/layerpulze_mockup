@@ -1773,3 +1773,95 @@ select.input { height: 34px; padding: 0 28px 0 12px; }
 .dark .ws-list-scan-cta { background: oklch(0.22 0.05 237); color: oklch(0.80 0.10 237); }
 
 .ws-list-arrow { color: var(--muted-foreground); }
+
+/* ─── Sidebar v2: logo image + collapse toggle + collapsed state ── */
+
+/* Logo row replaces the old .lp-sidebar-logo block */
+.lp-sidebar-logo-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+  padding: 16px 14px 10px;
+  position: relative; z-index: 2;
+}
+.lp-sidebar-logo-img {
+  height: 28px;
+  width: auto;
+  max-width: calc(100% - 32px);
+  object-fit: contain;
+  display: block;
+}
+.lp-mark-collapsed {
+  width: 36px; height: 24px;
+  display: grid; place-items: center;
+}
+.lp-mark-collapsed svg { width: 100%; height: 100%; display: block; }
+
+/* Collapse / expand toggle */
+.lp-sidebar-toggle {
+  width: 24px; height: 24px;
+  display: grid; place-items: center;
+  background: oklch(1 0 0 / 0.06);
+  border: 1px solid oklch(1 0 0 / 0.08);
+  border-radius: 6px;
+  color: oklch(0.75 0.01 250);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.12s ease;
+  padding: 0;
+}
+.lp-sidebar-toggle:hover {
+  background: oklch(1 0 0 / 0.10);
+  color: white;
+  border-color: oklch(1 0 0 / 0.14);
+}
+
+/* Collapsed state — narrow sidebar, icon-only nav */
+.lp-sidebar.collapsed { width: 72px; }
+
+.lp-sidebar.collapsed .lp-sidebar-logo-row {
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 10px 8px;
+  align-items: center;
+}
+
+/* Hide labels + group headers + sync card text when collapsed */
+.lp-sidebar.collapsed .lp-nav-label,
+.lp-sidebar.collapsed .lp-tenant-text,
+.lp-sidebar.collapsed .lp-tenant-chev,
+.lp-sidebar.collapsed .lp-nav-item .mini-count,
+.lp-sidebar.collapsed .lp-nav-item .dot-live,
+.lp-sidebar.collapsed .lp-nav-group,
+.lp-sidebar.collapsed .lp-sync { display: none; }
+
+/* Tenant card becomes a centered dot */
+.lp-sidebar.collapsed .lp-tenant {
+  margin: 8px 10px 6px;
+  padding: 9px;
+  justify-content: center;
+  gap: 0;
+}
+
+/* Nav items: icon-only, centered, with a small left accent for active */
+.lp-sidebar.collapsed .lp-nav { padding: 6px; }
+.lp-sidebar.collapsed .lp-nav-item {
+  justify-content: center;
+  padding: 10px 0;
+  gap: 0;
+  margin-bottom: 2px;
+}
+.lp-sidebar.collapsed .lp-nav-item.active {
+  padding-left: 0;
+  border-left: 0;
+}
+.lp-sidebar.collapsed .lp-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 8px; bottom: 8px; width: 3px;
+  background: oklch(0.69 0.17 237);
+  border-radius: 0 3px 3px 0;
+}
+.lp-sidebar.collapsed .lp-nav-footer { padding: 6px; }
+
+/* Smooth width transition when toggling */
+.lp-sidebar { transition: width 180ms cubic-bezier(0.4, 0, 0.2, 1); }

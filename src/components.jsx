@@ -1,6 +1,7 @@
 import React from 'react';
 import Icon from './Icon';
 import DATA from './data';
+import logoLayerPulse from './assets/logo-layerpulse.png';
 
 // Shared capacity-scope selector — used in the page-head top-right of every page
 // where the underlying KPIs / lists are capacity-attributable.
@@ -182,21 +183,50 @@ export function Sidebar({ route, setRoute }) {
   ];
 
   const top = route.split('/')[0];
+
+  // Collapse state — persisted to localStorage so it survives reload.
+  const [collapsed, setCollapsed] = React.useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('lp-sidebar-collapsed') === '1';
+  });
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('lp-sidebar-collapsed', collapsed ? '1' : '0');
+    // Notify the app shell so it can shift the main content offset.
+    document.documentElement.dataset.sidebar = collapsed ? 'collapsed' : 'expanded';
+  }, [collapsed]);
+
   return (
-    <aside className="lp-sidebar">
+    <aside className={'lp-sidebar' + (collapsed ? ' collapsed' : '')}>
       <div className="lp-sidebar-line"/>
       <div className="lp-sidebar-dots"/>
-      <div className="lp-sidebar-logo">
-        <div className="lp-mark">L</div>
-        <div className="lp-word">Layer<span>Pulse</span></div>
+
+      {/* Logo row + collapse toggle */}
+      <div className="lp-sidebar-logo-row">
+        {collapsed
+          ? <div className="lp-mark-collapsed" title="LayerPulse">
+              {/* compact wave mark, sharp at any size */}
+              <svg viewBox="0 0 48 32" fill="none" aria-hidden>
+                <path d="M4 22 Q 11 6, 18 22 Q 25 6, 32 22 Q 38 16, 44 22"
+                      stroke="oklch(0.75 0.16 220)" strokeWidth="3.5"
+                      strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              </svg>
+            </div>
+          : <img className="lp-sidebar-logo-img" src={logoLayerPulse} alt="LayerPulse.ai"/>}
+        <button className="lp-sidebar-toggle" onClick={() => setCollapsed(c => !c)}
+                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={14} strokeWidth={2.5}/>
+        </button>
       </div>
+
       <div className="lp-tenant" onClick={() => {}}>
         <div className="t-dot"/>
-        <div>
+        <div className="lp-tenant-text">
           <div className="t-name">{DATA.tenant.name}</div>
           <div className="t-sub">{DATA.tenant.env}</div>
         </div>
-        <Icon name="chevron-down" size={14}/>
+        <Icon name="chevron-down" size={14} className="lp-tenant-chev"/>
       </div>
       <nav className="lp-nav">
         {nav.map((sec, i) => (
@@ -205,9 +235,10 @@ export function Sidebar({ route, setRoute }) {
             {sec.items.map(item => (
               <button key={item.key}
                 className={'lp-nav-item' + (top === item.key ? ' active' : '')}
-                onClick={() => setRoute(item.key)}>
+                onClick={() => setRoute(item.key)}
+                title={collapsed ? item.label : undefined}>
                 <Icon name={item.icon} size={16}/>
-                <span>{item.label}</span>
+                <span className="lp-nav-label">{item.label}</span>
                 {item.count != null && <span className="mini-count">{item.count}</span>}
                 {item.live && <span className="dot-live"/>}
               </button>
@@ -223,8 +254,9 @@ export function Sidebar({ route, setRoute }) {
         <div className="lp-sync-meta">Last sync 4m ago · next ~26m</div>
       </div>
       <div className="lp-nav-footer">
-        <button className={'lp-nav-item' + (top === 'settings' ? ' active' : '')} onClick={() => setRoute('settings')}>
-          <Icon name="settings" size={16}/><span>Settings</span>
+        <button className={'lp-nav-item' + (top === 'settings' ? ' active' : '')} onClick={() => setRoute('settings')}
+                title={collapsed ? 'Settings' : undefined}>
+          <Icon name="settings" size={16}/><span className="lp-nav-label">Settings</span>
         </button>
       </div>
     </aside>
