@@ -220,14 +220,6 @@ export function Sidebar({ route, setRoute }) {
         </button>
       </div>
 
-      <div className="lp-tenant" onClick={() => {}}>
-        <div className="t-dot"/>
-        <div className="lp-tenant-text">
-          <div className="t-name">{DATA.tenant.name}</div>
-          <div className="t-sub">{DATA.tenant.env}</div>
-        </div>
-        <Icon name="chevron-down" size={14} className="lp-tenant-chev"/>
-      </div>
       <nav className="lp-nav">
         {nav.map((sec, i) => (
           <div key={i}>
@@ -246,13 +238,6 @@ export function Sidebar({ route, setRoute }) {
           </div>
         ))}
       </nav>
-      <div className="lp-sync">
-        <div className="lp-sync-row">
-          <span className="live"/>
-          <span className="lp-sync-title">Tenant sync</span>
-        </div>
-        <div className="lp-sync-meta">Last sync 4m ago · next ~26m</div>
-      </div>
       <div className="lp-nav-footer">
         <button className={'lp-nav-item' + (top === 'settings' ? ' active' : '')} onClick={() => setRoute('settings')}
                 title={collapsed ? 'Settings' : undefined}>

@@ -296,15 +296,31 @@ function IngestionTab() {
         <div className="settings-row">
           <div className="settings-row-main">
             <div className="settings-row-label">Schedule</div>
-            <div className="settings-row-sub">All syncs run at 02:00 in the timezone set below.</div>
+            <div className="settings-row-sub">All syncs run at 02:00 in the timezone set below. Pick a daily cadence, a specific weekday, or a custom cron expression.</div>
           </div>
-          <select className="input input-sm" value={schedule} onChange={e => setSchedule(e.target.value)} style={{ minWidth: 160 }}>
-            <option value="hourly">Hourly</option>
-            <option value="6h">Every 6 hours</option>
+          <select className="input input-sm" value={schedule} onChange={e => setSchedule(e.target.value)} style={{ minWidth: 200 }}>
             <option value="daily">Daily</option>
-            <option value="weekly">Weekly · Monday</option>
+            <option value="weekly-mon">Weekly on Monday</option>
+            <option value="weekly-tue">Weekly on Tuesday</option>
+            <option value="weekly-wed">Weekly on Wednesday</option>
+            <option value="weekly-thu">Weekly on Thursday</option>
+            <option value="weekly-fri">Weekly on Friday</option>
+            <option value="weekly-sat">Weekly on Saturday</option>
+            <option value="weekly-sun">Weekly on Sunday</option>
+            <option value="custom">Custom (cron expression)</option>
           </select>
         </div>
+        {schedule === 'custom' && (
+          <div className="settings-row" style={{ paddingTop: 0, borderTop: 0 }}>
+            <div className="settings-row-main">
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--muted-foreground)' }}>Cron expression</span>
+                <input className="input mono" defaultValue="0 2 * * *" placeholder="0 2 * * *  (every day at 02:00)" style={{ maxWidth: 320 }}/>
+                <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>5-field POSIX cron · minute hour day-of-month month day-of-week</span>
+              </label>
+            </div>
+          </div>
+        )}
 
         {/* Overall 30-day completion grid */}
         <div className="settings-row">
@@ -387,13 +403,29 @@ function IngestionTab() {
         <div className="form-grid form-grid-single">
           <label>Working timezone
             <select className="input" value={timezone} onChange={e => setTimezone(e.target.value)}>
-              <option>Amsterdam (NL)</option>
-              <option>London (UK)</option>
-              <option>New York (US-East)</option>
-              <option>San Francisco (US-West)</option>
-              <option>Singapore</option>
-              <option>Sydney</option>
-              <option>UTC</option>
+              <optgroup label="Americas">
+                <option>Los Angeles (PT)</option>
+                <option>Denver (MT)</option>
+                <option>Chicago (CT)</option>
+                <option>New York (ET)</option>
+                <option>São Paulo (BRT)</option>
+              </optgroup>
+              <optgroup label="Europe">
+                <option>London (UK)</option>
+                <option>Amsterdam (NL)</option>
+                <option>Berlin (DE)</option>
+                <option>Paris (FR)</option>
+                <option>Stockholm (SE)</option>
+              </optgroup>
+              <optgroup label="Asia-Pacific">
+                <option>Singapore (SGT)</option>
+                <option>Hong Kong (HKT)</option>
+                <option>Tokyo (JST)</option>
+                <option>Sydney (AEDT)</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option>UTC</option>
+              </optgroup>
             </select>
           </label>
         </div>
