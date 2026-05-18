@@ -85,6 +85,64 @@ export function CapacitySelector({ caps, value, onChange }) {
   );
 }
 
+// Compute a right-sizing recommendation per capacity. Rules of thumb:
+//   - throttle > 0 OR peak > 90%        → upsize (urgent)
+//   - avg < 30% AND peak < 60%          → downsize (save ~50% of bill)
+//   - else                              → right-sized
+function rightSize(cap) {
+  const tiers = ['F2','F4','F8','F16','F32','F64','F128'];
+  const idx = tiers.indexOf(cap.sku);
+  if (cap.throttle7d > 0 || cap.cuPeak30 > 90) {
+    const next = tiers[Math.min(idx + 1, tiers.length - 1)];
+    return { verdict: 'upsize', tone: 'rose', toSku: next,
+             label: `Throttle risk — upsize ${cap.sku} → ${next}`,
+             impact: cap.hasPricing ? `+${fmtMoney(Math.round(cap.monthlyBill * 1.0), cap.currency)}/mo · regain headroom` : 'Configure pricing first' };
+  }
+  if (cap.cuAvg30 < 30 && cap.cuPeak30 < 60) {
+    const prev = tiers[Math.max(idx - 1, 0)];
+    const saved = cap.hasPricing ? Math.round(cap.monthlyBill * 0.5) : 0;
+    return { verdict: 'downsize', tone: 'emerald', toSku: prev,
+             label: `Under-utilized — downsize ${cap.sku} → ${prev}`,
+             impact: cap.hasPricing ? `−${fmtMoney(saved, cap.currency)}/mo reclaimable` : 'Configure pricing first' };
+  }
+  return { verdict: 'ok', tone: 'sky', toSku: null,
+           label: 'Right-sized',
+           impact: 'Avg + peak within healthy band · no action' };
+}
+
+// Multi-line overlay for all capacities — 30d CU%.
+function CapsCompareChart({ capacities, highlightId }) {
+  const W = 920, H = 220, P = 30;
+  const lines = capacities.map(c => ({ c, data: DATA.capacityCU[c.id] || [] }));
+  if (lines.length === 0 || lines[0].data.length === 0) return null;
+  const N = lines[0].data.length;
+  const max = 100;
+  const x = i => P + i * (W - 2 * P) / (N - 1);
+  const y = v => H - P - (v / max) * (H - 2 * P);
+  const palette = { 'cap-prd': 'oklch(0.55 0.18 237)', 'cap-snd': 'oklch(0.55 0.18 290)', 'cap-uat': 'oklch(0.55 0.16 65)' };
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%">
+      {[0, 0.25, 0.5, 0.75, 1].map(f => (
+        <line key={f} x1={P} x2={W - P} y1={P + f * (H - 2 * P)} y2={P + f * (H - 2 * P)} stroke="oklch(0.92 0.005 250)" strokeDasharray="2 3"/>
+      ))}
+      <line x1={P} x2={W - P} y1={y(85)} y2={y(85)} stroke="oklch(0.55 0.22 25)" strokeDasharray="3 4" strokeWidth="1"/>
+      <text x={W - P + 4} y={y(85) + 4} fontSize="9" fill="oklch(0.55 0.22 25)" fontFamily="JetBrains Mono">85%</text>
+      {lines.map(({ c, data }) => {
+        const path = data.map((v, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(v)}`).join(' ');
+        const isHl = c.id === highlightId;
+        return (
+          <g key={c.id}>
+            <path d={path} fill="none" stroke={palette[c.id] || 'oklch(0.55 0.05 250)'} strokeWidth={isHl ? '2.4' : '1.4'} strokeOpacity={isHl ? 1 : 0.5}/>
+          </g>
+        );
+      })}
+      {[0, 7, 14, 21, N - 1].filter(i => i < N).map(i => (
+        <text key={i} x={x(i)} y={H - P + 14} fontSize="9" textAnchor="middle" fill="oklch(0.55 0.03 250)" fontFamily="JetBrains Mono">d−{N - 1 - i}</text>
+      ))}
+    </svg>
+  );
+}
+
 export function Capacity() {
   const [capId, setCapId] = React.useState('cap-prd');
   const [tab, setTab] = React.useState('30d');
@@ -99,19 +157,18 @@ export function Capacity() {
       <div className="lp-page-head">
         <div className="fade-in">
           <h1 className="lp-page-title">Capacity</h1>
-          <p className="lp-page-sub">Per-capacity utilization, throttling, and CU timing. Distinct values for each capacity under <span className="mono">{cap.env}</span>.</p>
+          <p className="lp-page-sub">Per-capacity utilization, throttling, and right-sizing across every Fabric capacity in this tenant.</p>
         </div>
-        <div className="fade-in d2" style={{ display: 'flex', gap: 8 }}>
+        <div className="fade-in d2 ws-head-actions">
           <CapacitySelector caps={DATA.capacities} value={capId} onChange={setCapId}/>
-          <button className="btn btn-outline btn-sm"><Icon name="refresh" size={12}/>Sync now</button>
         </div>
       </div>
 
       <div className="lp-grid-4 fade-in">
-        <StatCard label={'Avg utilization · ' + cap.name} value={cap.cuAvg30} unit="%" sub={`Peak ${cap.cuPeak30}% · ${cap.sku}`} icon="gauge" tone="sky"/>
+        <StatCard label={'Avg CU% · ' + cap.name} value={cap.cuAvg30} unit="%" sub={`Peak ${cap.cuPeak30}% · ${cap.sku}`} icon="gauge" tone={cap.cuAvg30 < 30 ? 'emerald' : cap.cuAvg30 > 75 ? 'amber' : 'sky'}/>
         <StatCard label="Throttle events" value={cap.throttle7d} sub="last 7d" icon="alert-triangle" tone={cap.throttle7d > 0 ? 'rose' : 'emerald'}/>
         <StatCard label="Monthly bill" value={cap.hasPricing ? fmtMoney(cap.monthlyBill, cap.currency) : '—'} sub={cap.hasPricing ? `${cap.vCores} vCores · ${cap.currency}` : <span className="missing-pricing">Configure in Settings</span>} icon="dollar" tone="violet"/>
-        <StatCard label="CU baseline" value={(cap.capacityCU / 1000).toFixed(1)} unit="k CU/day" sub={`${cap.vCores} × 3600 × 24`} icon="zap" tone="amber"/>
+        <StatCard label="Cost per 1k CU" value={cap.hasPricing ? fmtMoney(Math.round(cap.monthlyBill / (cap.capacityCU * 30 / 1000)), cap.currency) : '—'} sub="efficiency vs SKU baseline" icon="zap" tone="amber"/>
       </div>
 
       <div className="lp-section-head">
@@ -129,53 +186,64 @@ export function Capacity() {
           <span>throttle <span className="k">{cap.throttle7d}</span></span>
           <span>hours over 85% <span className="k">{overThreshold}</span></span>
         </div>
-        <div className="data-source-pill">
-          <Icon name="info" size={12}/>
-          <span>Per-capacity CU from <b>{DATA.perCapacityCutover}</b>. Earlier rows are tenant-aggregate.</span>
-          <a href="#" className="ds-link">What changed →</a>
-        </div>
       </div>
 
-      <div className="lp-grid-money fade-in d3" style={{ marginTop: 14 }}>
-        <div className="lp-card">
-          <div className="lp-card-header">
-            <div>
-              <div className="lp-card-title">Compare capacities</div>
-              <div className="lp-card-sub">30-day avg CU% — formerly identical across the selector</div>
-            </div>
-          </div>
+      <div className="lp-section-head" style={{ marginTop: 18 }}>
+        <h2>Compare capacities <span className="count">{DATA.capacities.length} active</span></h2>
+        <span className="lp-eyebrow">30-day CU% overlay · click any to focus</span>
+      </div>
+
+      <div className="lp-card fade-in d3">
+        <CapsCompareChart capacities={DATA.capacities} highlightId={capId}/>
+        <div className="cap-compare-legend">
           {DATA.capacities.map(c => (
-            <button key={c.id} className={'cap-compare' + (c.id === capId ? ' active' : '')} onClick={() => setCapId(c.id)}>
-              <span className={'cap-dot status-' + c.status}/>
-              <div className="cap-compare-name">{c.name}<span className="cap-sku">{c.sku}</span></div>
-              <div className="cap-compare-bar">
-                <div className="cap-compare-fill" style={{ width: c.cuAvg30 + '%' }}/>
-              </div>
-              <div className="cap-compare-val mono">{c.cuAvg30}<span className="muted">%</span></div>
+            <button key={c.id} className={'cap-compare-leg' + (c.id === capId ? ' active' : '')} onClick={() => setCapId(c.id)}>
+              <span className={'cap-leg-dot cap-leg-' + c.id}/>
+              <span className="cap-leg-name">{c.name}</span>
+              <span className="cap-sku">{c.sku}</span>
             </button>
           ))}
         </div>
-        <div className="lp-card">
-          <div className="lp-card-header">
-            <div>
-              <div className="lp-card-title">Data collection</div>
-              <div className="lp-card-sub">Per-arm sync status</div>
-            </div>
-            <span className="badge tone-emerald-soft">Synced 4m ago</span>
-          </div>
-          {[
-            { arm: 'FUAM lakehouse',        status: 'ok',   meta: 'last 4m · next ~26m' },
-            { arm: 'Metrics App (DAX)',     status: 'ok',   meta: 'MetricsByItemandHour · 11.2s' },
-            { arm: 'Activity events',       status: 'ok',   meta: '1,284 events / 24h' },
-            { arm: 'Cost calc (cron)',      status: 'ok',   meta: 'cost_observations_v2 · 6.4s' },
-          ].map(r => (
-            <div key={r.arm} className="arm-row">
-              <span className={'arm-dot status-' + r.status}/>
-              <span className="arm-name">{r.arm}</span>
-              <span className="arm-meta mono">{r.meta}</span>
-            </div>
-          ))}
+      </div>
+
+      <div className="lp-card lp-card-flush fade-in d4" style={{ marginTop: 14 }}>
+        <div className="cap-matrix-head">
+          <div>Capacity</div>
+          <div>SKU</div>
+          <div>Avg CU%</div>
+          <div>Peak</div>
+          <div>Throttle 7d</div>
+          <div>Monthly bill</div>
+          <div>Right-sizing</div>
         </div>
+        {DATA.capacities.map(c => {
+          const rs = rightSize(c);
+          return (
+            <button key={c.id} className={'cap-matrix-row' + (c.id === capId ? ' active' : '')} onClick={() => setCapId(c.id)}>
+              <div className="cap-matrix-name">
+                <span className={'cap-dot status-' + c.status}/>
+                {c.name}
+              </div>
+              <div><span className="badge badge-outline" style={{ fontSize: 10 }}>{c.sku}</span></div>
+              <div className="cap-matrix-bar-cell">
+                <div className="cap-matrix-bar">
+                  <div className="cap-matrix-fill" style={{ width: c.cuAvg30 + '%', background: c.cuAvg30 > 80 ? 'oklch(0.55 0.22 25)' : c.cuAvg30 > 60 ? 'oklch(0.62 0.16 65)' : 'oklch(0.55 0.18 237)' }}/>
+                </div>
+                <span className="mono">{c.cuAvg30}%</span>
+              </div>
+              <div className="mono">{c.cuPeak30}%</div>
+              <div className="mono">{c.throttle7d === 0 ? <span className="muted">0</span> : <span className="val-rose">{c.throttle7d}</span>}</div>
+              <div className="mono">{c.hasPricing ? fmtMoney(c.monthlyBill, c.currency) : <span className="muted">—</span>}</div>
+              <div className={'cap-matrix-rs tone-' + rs.tone + '-soft'}>
+                <Icon name={rs.verdict === 'upsize' ? 'trend-up' : rs.verdict === 'downsize' ? 'trend-down' : 'check'} size={11}/>
+                <div className="cap-matrix-rs-text">
+                  <div className="cap-matrix-rs-label">{rs.label}</div>
+                  <div className="cap-matrix-rs-impact mono">{rs.impact}</div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </>
   );
@@ -215,7 +283,7 @@ export function Costs() {
         {[
           ['attribution', 'Cost Attribution', 'dollar'],
           ['workload',    'Workload Mix',     'layers'],
-          ['observations','Observations',     'activity'],
+          ['adoption',    'Cost vs Adoption', 'trend-up'],
         ].map(([k, l, ic]) => (
           <button key={k} className={'model-tab' + (tab === k ? ' active' : '')} onClick={() => setTab(k)}>
             <Icon name={ic} size={14}/>{l}
@@ -225,7 +293,7 @@ export function Costs() {
 
       {tab === 'attribution'  && <CostAttribution capId={capId}/>}
       {tab === 'workload'     && <WorkloadMix capId={capId}/>}
-      {tab === 'observations' && <Observations/>}
+      {tab === 'adoption'     && <CostVsAdoption capId={capId}/>}
     </>
   );
 }
@@ -546,25 +614,197 @@ function PeakHeatmap({ data }) {
   );
 }
 
-export function Observations() {
+// ─── Cost vs Adoption (replaces Observations tab) ──────────────────────
+// Per-artifact scatter: x = distinct users (30d), y = $/mo. Median-split into 4 quadrants:
+//   Wasted (high $, low users) · Hot (high $, high users) · Efficient (low $, high users) · Idle (low $, low users)
+// Rose quadrant = the operator's cancel list. Emerald = ROI proof.
+
+const QUAD = {
+  wasted:    { label: 'Wasted',    tone: 'rose',    bg: 'oklch(0.96 0.05 25 / 0.55)',  fill: 'oklch(0.55 0.22 25)'  },
+  hot:       { label: 'Hot',       tone: 'amber',   bg: 'oklch(0.96 0.07 65 / 0.55)',  fill: 'oklch(0.62 0.16 65)'  },
+  efficient: { label: 'Efficient', tone: 'emerald', bg: 'oklch(0.96 0.05 150 / 0.45)', fill: 'oklch(0.55 0.16 150)' },
+  idle:      { label: 'Idle',      tone: 'slate',   bg: 'oklch(0.96 0.005 250 / 0.55)',fill: 'oklch(0.55 0.02 250)' },
+};
+
+// Stable pseudo-random in [0, 1) for fabricating per-item distinct-users counts.
+function seededRand(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return ((h >>> 0) % 10000) / 10000;
+}
+function fakeUsers(name, costPct) {
+  // Higher-cost items skew slightly toward more users (but not always — that's the chart's point).
+  // Bimodal: cheap items can be loved or ignored, expensive items can be hot or wasted.
+  const r = seededRand(name);
+  const base = 4 + Math.round(r * 280);
+  return base;
+}
+
+export function CostVsAdoption({ capId }) {
+  const cap = DATA.capacities.find(c => c.id === capId);
+  const groups = DATA.costItems[capId] || [];
+  const allItems = groups.flatMap(g => g.items.map(it => ({ ...it, ws: g.ws, tone: g.tone })));
+
+  if (!cap.hasPricing || allItems.length === 0) {
+    return (
+      <div className="empty-cost fade-in d3">
+        <div className="empty-cost-icon"><Icon name="trend-up" size={28}/></div>
+        <h3>No data to plot for {cap.name}</h3>
+        <p>{!cap.hasPricing
+          ? 'Cost vs Adoption needs a contracted monthly price + 30 days of activity. Configure pricing in Settings.'
+          : 'No per-item activity in the 30-day window — nothing to score.'}</p>
+      </div>
+    );
+  }
+
+  // Compute per-artifact (cost, users) with quadrant classification via median split.
+  const items = allItems.map(it => ({
+    name: it.name,
+    ws: it.ws,
+    type: it.type,
+    cost: Math.round((it.costPct / 100) * cap.monthlyBill),
+    users: fakeUsers(it.name, it.costPct),
+  }));
+  const costs = items.map(i => i.cost).sort((a, b) => a - b);
+  const users = items.map(i => i.users).sort((a, b) => a - b);
+  const medCost  = costs[Math.floor(costs.length / 2)];
+  const medUsers = users[Math.floor(users.length / 2)];
+  items.forEach(i => {
+    i.quad = i.cost >= medCost
+      ? (i.users >= medUsers ? 'hot' : 'wasted')
+      : (i.users >= medUsers ? 'efficient' : 'idle');
+  });
+
+  const quadCounts = { wasted: 0, hot: 0, efficient: 0, idle: 0 };
+  const quadTotals = { wasted: 0, hot: 0, efficient: 0, idle: 0 };
+  items.forEach(i => { quadCounts[i.quad]++; quadTotals[i.quad] += i.cost; });
+
+  const wastedItems = items.filter(i => i.quad === 'wasted').sort((a, b) => b.cost - a.cost).slice(0, 5);
+
   return (
     <>
-      <div className="lp-section-head"><h2>Recent observations <span className="count">last 24 hours</span></h2></div>
-      <div className="lp-card lp-card-flush fade-in d2">
-        <table className="lp-table">
-          <thead><tr><th>Date</th><th>Item</th><th>Operation</th><th style={{ textAlign: 'right' }}>CU</th></tr></thead>
-          <tbody>
-            {DATA.cuTable.map((r, i) => (
-              <tr key={i}>
-                <td className="muted num">{r.date}</td>
-                <td>{r.item}</td>
-                <td><Badge tone="outline">{r.op}</Badge></td>
-                <td className="num" style={{ textAlign: 'right', fontWeight: 600 }}>{r.cu.toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="lp-grid-4 fade-in d3">
+        <StatCard label="Wasted · cancel list" value={quadCounts.wasted}
+                  sub={fmtMoney(quadTotals.wasted, cap.currency) + '/mo · high cost, low users'}
+                  icon="alert-triangle" tone="rose"/>
+        <StatCard label="Hot · paying its way" value={quadCounts.hot}
+                  sub={fmtMoney(quadTotals.hot, cap.currency) + '/mo · expensive but loved'}
+                  icon="trend-up" tone="amber"/>
+        <StatCard label="Efficient · ROI proof" value={quadCounts.efficient}
+                  sub={fmtMoney(quadTotals.efficient, cap.currency) + '/mo · cheap + adopted'}
+                  icon="check" tone="emerald"/>
+        <StatCard label="Idle · review later" value={quadCounts.idle}
+                  sub={fmtMoney(quadTotals.idle, cap.currency) + '/mo · low cost + low users'}
+                  icon="moon" tone="sky"/>
       </div>
+
+      <div className="lp-section-head">
+        <h2>Cost vs Adoption · four quadrants</h2>
+        <span className="lp-eyebrow">Median-split scatter · 30 days · {cap.name}</span>
+      </div>
+      <div className="lp-card fade-in d4">
+        <ScatterQuadrants items={items} medCost={medCost} medUsers={medUsers} cap={cap}/>
+        <div className="quad-legend">
+          {Object.entries(QUAD).map(([k, q]) => (
+            <span key={k} className="quad-leg">
+              <span className="quad-leg-dot" style={{ background: q.fill }}/>
+              {q.label} <span className="mono muted">{quadCounts[k]}</span>
+            </span>
+          ))}
+          <span className="quad-takeaway">
+            <Icon name="info" size={12}/>
+            The rose quadrant is your cancel list. The emerald quadrant proves the investment paid off.
+          </span>
+        </div>
+      </div>
+
+      {wastedItems.length > 0 && (
+        <>
+          <div className="lp-section-head" style={{ marginTop: 18 }}>
+            <h2>Top wasted-spend candidates <span className="count">{wastedItems.length}</span></h2>
+            <span className="lp-eyebrow">High cost · low adoption · 30 days</span>
+          </div>
+          <div className="lp-card lp-card-flush fade-in d5">
+            <div className="quad-list-head">
+              <div></div>
+              <div>Item</div>
+              <div>Workspace</div>
+              <div>Type</div>
+              <div>Distinct users</div>
+              <div>{cap.currency} / mo</div>
+              <div>Action</div>
+            </div>
+            {wastedItems.map((it, i) => (
+              <div key={it.name} className="quad-list-row">
+                <div className="cost-rank mono">{i + 1}</div>
+                <div className="cost-name">
+                  <Icon name={({'Power BI':'bar-chart','Dataflow':'database','Pipeline':'git-branch','Spark':'zap','Dataset':'layers'})[it.type] || 'boxes'} size={12}/>
+                  <span>{it.name}</span>
+                </div>
+                <div><span className={'badge tone-' + (it.tone || 'slate') + '-soft'}>{it.ws}</span></div>
+                <div className="muted" style={{ fontSize: 12 }}>{it.type}</div>
+                <div className="mono">{it.users}</div>
+                <div className="mono" style={{ fontWeight: 600 }}>{fmtMoney(it.cost, cap.currency)}</div>
+                <div><button className="btn btn-outline btn-sm">Review</button></div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </>
+  );
+}
+
+function ScatterQuadrants({ items, medCost, medUsers, cap }) {
+  const W = 920, H = 360, P = 44;
+  const maxCost  = Math.max(...items.map(i => i.cost), 1) * 1.05;
+  const maxUsers = Math.max(...items.map(i => i.users), 1) * 1.08;
+  const x = u => P + (u / maxUsers) * (W - 2 * P);
+  const y = c => H - P - (c / maxCost) * (H - 2 * P);
+  const midX = x(medUsers);
+  const midY = y(medCost);
+  // Dot size: scale by cost share — diameter 8..24
+  const maxR = Math.max(...items.map(i => i.cost));
+  const dotR = c => 5 + Math.sqrt(c / maxR) * 12;
+
+  return (
+    <div className="quad-wrap">
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%">
+        {/* Quadrant backgrounds */}
+        <rect x={P}    y={P}    width={midX - P}   height={midY - P}    fill={QUAD.wasted.bg}/>
+        <rect x={midX} y={P}    width={W - P - midX} height={midY - P}  fill={QUAD.hot.bg}/>
+        <rect x={midX} y={midY} width={W - P - midX} height={H - P - midY} fill={QUAD.efficient.bg}/>
+        <rect x={P}    y={midY} width={midX - P}   height={H - P - midY} fill={QUAD.idle.bg}/>
+
+        {/* Median dashed splits */}
+        <line x1={midX} x2={midX} y1={P} y2={H - P} stroke="oklch(0.70 0.02 250)" strokeDasharray="4 4"/>
+        <line x1={P} x2={W - P} y1={midY} y2={midY} stroke="oklch(0.70 0.02 250)" strokeDasharray="4 4"/>
+
+        {/* Quadrant labels (corners) */}
+        <text x={P + 8}      y={P + 16}      fontSize="10" fontWeight="700" fill={QUAD.wasted.fill}    letterSpacing="0.06em">WASTED · HIGH $ / LOW USERS</text>
+        <text x={midX + 8}   y={P + 16}      fontSize="10" fontWeight="700" fill={QUAD.hot.fill}       letterSpacing="0.06em">HOT · HIGH $ / HIGH USERS</text>
+        <text x={midX + 8}   y={midY + 16}   fontSize="10" fontWeight="700" fill={QUAD.efficient.fill} letterSpacing="0.06em">EFFICIENT · LOW $ / HIGH USERS</text>
+        <text x={P + 8}      y={midY + 16}   fontSize="10" fontWeight="700" fill={QUAD.idle.fill}      letterSpacing="0.06em">IDLE · LOW $ / LOW USERS</text>
+
+        {/* Axes */}
+        <line x1={P} x2={P}        y1={P} y2={H - P} stroke="oklch(0.85 0.005 250)"/>
+        <line x1={P} x2={W - P}    y1={H - P} y2={H - P} stroke="oklch(0.85 0.005 250)"/>
+        <text x={P - 6} y={P - 8} fontSize="10" fill="oklch(0.55 0.03 250)" fontFamily="JetBrains Mono">{cap.currency}/mo →</text>
+        <text x={W - P} y={H - P + 18} textAnchor="end" fontSize="10" fill="oklch(0.55 0.03 250)" fontFamily="JetBrains Mono">distinct users (30d) →</text>
+
+        {/* Dots */}
+        {items.map(it => {
+          const meta = QUAD[it.quad];
+          const cx = x(it.users), cy = y(it.cost), r = dotR(it.cost);
+          return (
+            <g key={it.name} className="quad-dot-g">
+              <circle cx={cx} cy={cy} r={r} fill={meta.fill} fillOpacity="0.85" stroke="white" strokeWidth="1.5"/>
+              {r > 9 && <text x={cx + r + 4} y={cy + 3} fontSize="10" fill="oklch(0.30 0.03 250)" fontWeight="500">{it.name}</text>}
+              <title>{it.name} — {fmtMoney(it.cost, cap.currency)}/mo · {it.users} distinct users · {meta.label}</title>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
