@@ -147,9 +147,8 @@ export function Workspaces({ onOpen }) {
           </div>
 
           <div className="ws-env-chips">
-            {[['all','All','sky'],['prod','PROD','emerald'],['uat','UAT','amber'],['dev','DEV','violet']].map(([k, label, tone]) => (
+            {[['all','All'],['prod','PROD'],['uat','UAT'],['dev','DEV']].map(([k, label]) => (
               <button key={k} className={'chip ws-env-chip' + (env === k ? ' active' : '')} onClick={() => setEnv(k)}>
-                <span className={'ws-env-dot tone-' + tone + '-solid'}/>
                 {label}<span className="count">{envCounts[k]}</span>
               </button>
             ))}

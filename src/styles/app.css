@@ -1627,13 +1627,20 @@ select.input { height: 34px; padding: 0 28px 0 12px; }
 .ws-filter-row .ws-sort-wrap   { flex-shrink: 0; }
 .ws-filter-row .ws-view-toggle { flex-shrink: 0; }
 
-/* Z-INDEX FIX: the filter card creates its own stacking context above the workspace grid below, */
-/* so dropdown popovers render on top of cards (even when cards have transform-on-hover). */
-.ws-filter-card { position: relative; z-index: 30; overflow: visible; }
-.ws-cap-pop, .ws-sort-pop { z-index: 60; }
+/* ─── Z-INDEX FIX (Workspaces dropdowns must paint on top of everything below) ─── */
+/* Each wrapper establishes a high stacking context so its popover beats subsequent siblings */
+/* (KPI grid, filter card, workspace grid) even if those have transforms on hover.            */
+.lp-page-head    { position: relative; z-index: 200; }
+.ws-head-actions { position: relative; z-index: 200; display: flex; gap: 8px; align-items: center; }
+.ws-cap-wrap     { z-index: 200; }
+.ws-cap-wrap-head{ z-index: 200; }
+.ws-cap-pop, .ws-cap-pop-right { z-index: 1000; }
+
+.ws-filter-card  { position: relative; z-index: 30; overflow: visible; }
+.ws-sort-wrap    { z-index: 50; }
+.ws-sort-pop     { z-index: 1000; }
 
 /* Capacity selector in page-head (top-right, alongside Sync / Connect actions) */
-.ws-head-actions { display: flex; gap: 8px; align-items: center; }
 .ws-cap-wrap-head .ws-cap-btn { min-width: 180px; height: 32px; }
 .ws-cap-pop-right { left: auto !important; right: 0; }
 
