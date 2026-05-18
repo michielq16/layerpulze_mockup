@@ -110,12 +110,11 @@ export function Workspaces({ onOpen }) {
         <span className="lp-eyebrow">FILTER BY CAPACITY, ENVIRONMENT, OR NAME</span>
       </div>
 
-      {/* Row 1: Capacity · Search · Env pills · Starred */}
+      {/* Single-row filter bar: Capacity · Search · Env pills · Starred · Sort · View toggle */}
       <div className="lp-card lp-card-flush ws-filter-card fade-in d2">
         <div className="ws-filter-row">
-          {/* Capacity selector */}
+          {/* Capacity selector (no redundant CAPACITY label — the button text is self-evident) */}
           <div className="ws-cap-wrap">
-            <span className="ws-cap-label">CAPACITY</span>
             <button className={'ws-cap-btn' + (capOpen ? ' open' : '')} onClick={() => { setCapOpen(o => !o); setSortOpen(false); }}>
               <span className={'ws-cap-dot' + (capacityId === 'all' ? '' : ' active')}/>
               <span className="ws-cap-name">{capacityId === 'all' ? 'All capacities' : selectedCap?.name}</span>
@@ -159,10 +158,8 @@ export function Workspaces({ onOpen }) {
               <Icon name="star" size={12}/>Starred
             </button>
           </div>
-        </div>
 
-        {/* Row 2: Sort · View toggle (right-aligned) */}
-        <div className="ws-filter-row ws-filter-controls">
+          {/* Sort dropdown */}
           <div className="ws-sort-wrap">
             <button className={'ws-sort-btn' + (sortOpen ? ' open' : '')} onClick={() => { setSortOpen(o => !o); setCapOpen(false); }}>
               <Icon name="sort" size={12}/>
@@ -182,6 +179,7 @@ export function Workspaces({ onOpen }) {
             )}
           </div>
 
+          {/* View toggle */}
           <div className="ws-view-toggle">
             <button className={'ws-view-btn' + (viewMode === 'tile' ? ' active' : '')} onClick={() => setViewMode('tile')} title="Tile view" aria-label="Tile view">
               <Icon name="grid" size={14}/>

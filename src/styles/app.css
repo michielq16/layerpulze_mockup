@@ -1541,15 +1541,11 @@ select.input { height: 34px; padding: 0 28px 0 12px; }
 .ws-health-dot.tone-rose-solid    { background: oklch(0.55 0.22 25);  }
 
 /* Filter bar */
-.ws-filter-card { padding: 12px; margin-bottom: 14px; }
-.ws-filter-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.ws-filter-card { padding: 10px 12px; margin-bottom: 14px; }
+.ws-filter-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
-/* Capacity selector — left of search */
-.ws-cap-wrap { position: relative; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.ws-cap-label {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
-  color: var(--muted-foreground); text-transform: uppercase;
-}
+/* Capacity selector */
+.ws-cap-wrap { position: relative; flex-shrink: 0; }
 .ws-cap-btn {
   display: inline-flex; align-items: center; gap: 8px;
   height: 34px; padding: 0 10px;
@@ -1557,7 +1553,7 @@ select.input { height: 34px; padding: 0 28px 0 12px; }
   border-radius: 8px;
   font-family: inherit; font-size: 12.5px; font-weight: 500;
   cursor: pointer;
-  min-width: 220px;
+  min-width: 200px;
   transition: all 0.12s;
 }
 .ws-cap-btn:hover { border-color: oklch(0.78 0.04 250); }
@@ -1582,7 +1578,7 @@ select.input { height: 34px; padding: 0 28px 0 12px; }
 }
 
 .ws-cap-pop {
-  position: absolute; top: 40px; left: 70px; z-index: 20;
+  position: absolute; top: 40px; left: 0; z-index: 20;
   min-width: 280px;
   background: var(--card); border: 1px solid var(--border);
   border-radius: 10px;
@@ -1623,11 +1619,12 @@ select.input { height: 34px; padding: 0 28px 0 12px; }
 /* Section head matches the design standard: title left, FILTER BY ... eyebrow right */
 .ws-section-head .lp-eyebrow { font-size: 10.5px; letter-spacing: 0.1em; }
 
-/* Filter card — two-row layout (filters · controls), no clutter */
-.ws-filter-card { padding: 12px 14px; margin-bottom: 14px; }
-.ws-filter-card .ws-filter-row + .ws-filter-row { margin-top: 10px; }
-.ws-filter-controls { justify-content: flex-end; }
-.ws-search { flex: 1; min-width: 240px; }
+/* Single-row filter card (operator preference 2026-05-18) */
+.ws-search { flex: 1; min-width: 220px; }
+
+/* Sort dropdown + view toggle hug the right edge of the row */
+.ws-filter-row .ws-sort-wrap   { margin-left: auto; }
+.ws-filter-row .ws-view-toggle { flex-shrink: 0; }
 
 /* Env chips — slightly tighter spacing, env dots colored */
 .ws-env-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
