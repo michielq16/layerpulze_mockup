@@ -86,32 +86,40 @@ const STATUS = {
   missing: { label: 'No owner', tone: 'rose' },
 };
 
-/* Inline cell — 3 stacked mini-bars for Owner / SME / Stewards coverage. */
+/* Inline cell — 3 stacked bars for Owner / SME / Stewards coverage.
+   Each bar is FULL-WIDTH and tone-coded by threshold:
+     · 100%     → green  (full)
+     · 50-99%   → amber  (partial)
+     · 1-49%    → red    (low)
+     · 0%       → faded red (empty)
+   Role label on the left keeps its role-tone (sky/emerald/amber)
+   so you can still see which role is which at a glance. */
 function RoleCoverageCell({ cov }) {
   if (cov.total === 0) return <span className="own-empty">no models</span>;
+  const tier = (n) => {
+    if (n === 0)                return 'empty';
+    const pct = n / cov.total;
+    if (pct >= 1)               return 'full';
+    if (pct >= 0.5)             return 'partial';
+    return 'low';
+  };
   const rows = [
-    { label: 'O', tone: 'sky',     n: cov.ownerSet },
-    { label: 'S', tone: 'emerald', n: cov.smeSet },
-    { label: 'W', tone: 'amber',   n: cov.stewardSet },
+    { label: 'O', tone: 'sky',     n: cov.ownerSet,   name: 'Owner' },
+    { label: 'S', tone: 'emerald', n: cov.smeSet,     name: 'SME' },
+    { label: 'W', tone: 'amber',   n: cov.stewardSet, name: 'Stewards' },
   ];
   return (
     <span className="role-cov-cell">
-      {rows.map(r => {
-        const pct = Math.round((r.n / cov.total) * 100);
-        return (
-          <span key={r.label} className="role-cov-row" title={`${r.label === 'O' ? 'Owner' : r.label === 'S' ? 'SME' : 'Stewards'}: ${r.n}/${cov.total} models`}>
-            <span className={'role-cov-label role-cov-label-' + r.tone}>{r.label}</span>
-            <span className="role-cov-bar">
-              <span className={'role-cov-bar-fill role-cov-bar-fill-' + r.tone} style={{ width: pct + '%' }}/>
-            </span>
-            <span className="mono role-cov-num">{r.n}/{cov.total}</span>
-          </span>
-        );
-      })}
+      {rows.map(r => (
+        <span key={r.label} className="role-cov-row" title={`${r.name}: ${r.n}/${cov.total} models`}>
+          <span className={'role-cov-label role-cov-label-' + r.tone}>{r.label}</span>
+          <span className={'role-cov-bar role-cov-bar-tier-' + tier(r.n)}/>
+          <span className="mono role-cov-num">{r.n}/{cov.total}</span>
+        </span>
+      ))}
     </span>
   );
 }
-
 export function Ownership({ onOpenModel }) {
   const o = DATA.ownership;
   const [search, setSearch] = React.useState('');
