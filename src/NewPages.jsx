@@ -2,6 +2,7 @@ import React from 'react';
 import Icon from './Icon';
 import DATA from './data';
 import { StatCard } from './components';
+import { resolveModelOwner, resolveModelSme, resolveModelStewards, resolveModelDomain } from './Ownership';
 
 export function Documents() {
   const d = DATA.documents;
@@ -546,7 +547,16 @@ function DocumentPreviewModal({ model, ws, env = 'PROD', audience: initialAudien
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  const ctx = { model, ws, env, includeLogo, generatedAt, sample, audience };
+  // Resolve real role assignments (joined into doc per the audience → role mapping
+  // documented in docs/analysis/fabric-artifact-ownership-conventions.md). Falls
+  // back gracefully when secondary roles (SME, Stewards) aren't set.
+  const modelId   = (DATA.documents.pickerModels.find(m => m.name === model) || {}).id;
+  const owner     = resolveModelOwner(model, ws);
+  const sme       = modelId ? resolveModelSme(modelId)      : null;
+  const stewards  = modelId ? resolveModelStewards(modelId) : [];
+  const domain    = modelId ? resolveModelDomain(modelId)   : null;
+
+  const ctx = { model, ws, env, includeLogo, generatedAt, sample, audience, owner, sme, stewards, domain };
   const pages = React.useMemo(() => buildDocPages(audience, ctx), [audience, model, ws, env, includeLogo, generatedAt]);
   const total = pages.length;
 
@@ -716,8 +726,14 @@ function DocCover({ ctx, audienceLabel, audienceTone, subtitle, version }) {
         <div><span className="doc-cover-k">Environment</span><span className="doc-cover-v mono">{ctx.env}</span></div>
         <div><span className="doc-cover-k">Generated</span><span className="doc-cover-v">{ctx.generatedAt}</span></div>
         <div><span className="doc-cover-k">Version</span><span className="doc-cover-v mono">{version}</span></div>
-        <div><span className="doc-cover-k">Owner</span><span className="doc-cover-v">{ctx.sample.owners[0].name}</span></div>
-        <div><span className="doc-cover-k">Source</span><span className="doc-cover-v">Microsoft Fabric · Power BI semantic model</span></div>
+        <div>
+          <span className="doc-cover-k">Owner</span>
+          <span className="doc-cover-v">
+            {ctx.owner ? ctx.owner.name : <em style={{ color: '#b91c1c' }}>— Not yet assigned —</em>}
+            {ctx.owner?.source === 'workspace' && <span style={{ fontSize: '9pt', color: '#94a3b8', marginLeft: 6 }}>(inherited from workspace)</span>}
+          </span>
+        </div>
+        <div><span className="doc-cover-k">{ctx.domain ? 'Domain' : 'Source'}</span><span className="doc-cover-v">{ctx.domain ? ctx.domain.label : 'MS Fabric · semantic model'}</span></div>
       </div>
 
       <div className="doc-cover-foot">
@@ -917,19 +933,44 @@ function FindingsList({ findings }) {
   );
 }
 
-function OwnersTable({ owners }) {
+/* OwnersTable — pulls Owner + SME + Stewards from the LP role taxonomy
+   (resolved in ctx). Falls back to the sample.owners list when ctx lacks
+   live roles (mockup-only path). */
+function OwnersTable({ ctx }) {
+  const rows = [];
+
+  if (ctx?.owner) {
+    rows.push({
+      name: ctx.owner.name,
+      role: 'Owner' + (ctx.owner.source === 'workspace' ? ' (inherited from workspace)' : ''),
+      email: ctx.owner.email,
+      last: ctx.owner.set || '—',
+    });
+  }
+  if (ctx?.sme) {
+    rows.push({ name: ctx.sme.name, role: 'SME', email: ctx.sme.userEmail, last: ctx.sme.set });
+  } else if (ctx?.owner) {
+    rows.push({ name: ctx.owner.name, role: 'SME (fallback to Owner — none assigned)', email: ctx.owner.email, last: ctx.owner.set, fallback: true });
+  }
+  (ctx?.stewards || []).forEach(s => {
+    rows.push({ name: s.name, role: 'Steward', email: s.userEmail, last: s.set });
+  });
+
   return (
     <>
       <h2 className="doc-h2">Owners &amp; stewards</h2>
+      <p className="doc-p doc-p-sub">Captured in LayerPulse · {ctx?.domain ? `Domain: ${ctx.domain.label}` : 'Domain not tagged'}.</p>
       <table className="doc-table">
         <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Last touched</th></tr></thead>
         <tbody>
-          {owners.map((o, i) => (
-            <tr key={i}>
-              <td><b>{o.name}</b></td>
-              <td>{o.role}</td>
-              <td className="mono doc-td-mail">{o.email}</td>
-              <td className="mono">{o.last}</td>
+          {rows.length === 0 ? (
+            <tr><td colSpan="4" style={{ color: '#94a3b8', fontStyle: 'italic' }}>No roles assigned in LayerPulse. Add via /ownership.</td></tr>
+          ) : rows.map((r, i) => (
+            <tr key={i} style={r.fallback ? { color: '#94a3b8', fontStyle: 'italic' } : undefined}>
+              <td><b>{r.name}</b></td>
+              <td>{r.role}</td>
+              <td className="mono doc-td-mail">{r.email}</td>
+              <td className="mono">{r.last}</td>
             </tr>
           ))}
         </tbody>
@@ -1088,19 +1129,42 @@ function auditorPages(ctx) {
     // 7 — Findings
     <FindingsList findings={s.findings} />,
 
-    // 8 — Owners + changelog + sign-off
+    // 8 — Owners + changelog + sign-off (pulls real roles from LP)
     <>
-      <OwnersTable owners={s.owners} />
+      <OwnersTable ctx={ctx} />
       <ChangelogTable entries={s.changelog} limit={8} />
       <div className="doc-signoff">
+        <h3 className="doc-h3" style={{ marginTop: 22, marginBottom: 14 }}>Sign-off</h3>
+        <p className="doc-p doc-p-sub">Signatures required from the LP-captured Owner and Stewards before submission.</p>
         <div className="doc-signoff-row">
           <div className="doc-signoff-cell">
-            <div className="doc-signoff-label">Reviewed by</div>
+            <div className="doc-signoff-label">Owner</div>
+            <div style={{ fontSize: '10pt', fontWeight: 600, marginTop: 6 }}>{ctx.owner ? ctx.owner.name : <em style={{ color: '#b91c1c' }}>— not assigned —</em>}</div>
             <div className="doc-signoff-line"/>
-            <div className="doc-signoff-sub">Name · role · date</div>
+            <div className="doc-signoff-sub">Signature · date</div>
           </div>
+          {ctx.stewards.length === 0 ? (
+            <div className="doc-signoff-cell">
+              <div className="doc-signoff-label">Steward</div>
+              <div style={{ fontSize: '9pt', color: '#b91c1c', fontStyle: 'italic', marginTop: 6 }}>No stewards assigned in LP.</div>
+              <div className="doc-signoff-line"/>
+              <div className="doc-signoff-sub">Add via /ownership</div>
+            </div>
+          ) : (
+            ctx.stewards.slice(0, 2).map((st, i) => (
+              <div key={st.userEmail} className="doc-signoff-cell">
+                <div className="doc-signoff-label">Steward · {i + 1}</div>
+                <div style={{ fontSize: '10pt', fontWeight: 600, marginTop: 6 }}>{st.name}</div>
+                <div className="doc-signoff-line"/>
+                <div className="doc-signoff-sub">Signature · date</div>
+              </div>
+            ))
+          )}
+        </div>
+        {ctx.stewards.length > 2 && <div style={{ fontSize: '9pt', color: '#94a3b8', marginTop: 8 }}>+ {ctx.stewards.length - 2} additional steward(s) on file in LP.</div>}
+        <div className="doc-signoff-row" style={{ marginTop: 22 }}>
           <div className="doc-signoff-cell">
-            <div className="doc-signoff-label">Auditor signature</div>
+            <div className="doc-signoff-label">External auditor</div>
             <div className="doc-signoff-line"/>
             <div className="doc-signoff-sub">Name · firm · date</div>
           </div>
@@ -1119,6 +1183,7 @@ function analystPages(ctx) {
 
     <>
       <ExecKpiGrid kpis={s.execSummary.kpis} narrative={s.execSummary.narrative + ' Use this document as your starting point — most analyst questions are answered in the Measures and Glossary sections.'} />
+      <ContactCard ctx={ctx}/>
       <TocList items={[
         { title: '1 · Tables &amp; columns',   page: 3 },
         { title: '2 · Relationships',        page: 4 },
@@ -1142,9 +1207,35 @@ function analystPages(ctx) {
 
     <>
       <GlossaryList terms={s.glossary} />
-      <OwnersTable owners={s.owners} />
+      <OwnersTable ctx={ctx} />
     </>,
   ];
+}
+
+/* ContactCard — "Questions? Contact:" block for Analyst preset.
+   Uses SME if assigned in LP, otherwise falls back to Owner with an
+   explicit indicator. Renders blanks visibly if neither is set. */
+function ContactCard({ ctx }) {
+  const person = ctx.sme || (ctx.owner ? { name: ctx.owner.name, userEmail: ctx.owner.email, title: '', fallback: true } : null);
+  if (!person) {
+    return (
+      <div style={{ padding: '10px 14px', border: '0.75pt solid #cbd5e1', borderLeft: '3pt solid #b91c1c', borderRadius: 2, background: '#fef2f2', margin: '12px 0' }}>
+        <div className="lp-eyebrow" style={{ color: '#b91c1c', fontSize: '8.5pt' }}>Questions? Contact:</div>
+        <div style={{ fontSize: '10.5pt', fontStyle: 'italic', color: '#94a3b8', marginTop: 4 }}>No SME or Owner assigned. Add via LayerPulse /ownership before sharing this doc.</div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ padding: '10px 14px', border: '0.75pt solid #cbd5e1', borderLeft: '3pt solid #0D3159', borderRadius: 2, background: '#f8fafc', margin: '12px 0' }}>
+      <div className="lp-eyebrow" style={{ fontSize: '8.5pt' }}>Questions? Contact:</div>
+      <div style={{ fontSize: '11pt', fontWeight: 700, marginTop: 4 }}>
+        {person.name}
+        {person.fallback && <span style={{ fontSize: '8.5pt', fontWeight: 400, color: '#94a3b8', marginLeft: 6 }}>(SME not assigned — uses Owner)</span>}
+      </div>
+      <div className="mono" style={{ fontSize: '9.5pt', color: '#64748b' }}>{person.userEmail || person.email}</div>
+      {person.title && <div style={{ fontSize: '9.5pt', color: '#64748b' }}>{person.title}</div>}
+    </div>
+  );
 }
 
 function executivePages(ctx) {
