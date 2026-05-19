@@ -67,11 +67,11 @@ const SCHEDULE_LABELS = {
   onchange: { label: 'On change',     icon: 'zap',      tone: 'violet'  },
 };
 
-const AUDIENCE_LABELS = {
-  auditor:   { label: 'Auditor',   tone: 'rose'    },
-  analyst:   { label: 'Analyst',   tone: 'sky'     },
-  executive: { label: 'Executive', tone: 'amber'   },
-  engineer:  { label: 'Engineer',  tone: 'violet'  },
+export const AUDIENCE_LABELS = {
+  auditor:   { label: 'Auditor',   tone: 'rose',   sub: 'SOC 2 / HIPAA evidence' },
+  analyst:   { label: 'Analyst',   tone: 'sky',    sub: 'Onboarding handoff'    },
+  executive: { label: 'Executive', tone: 'amber',  sub: 'QBR-ready summary'      },
+  engineer:  { label: 'Engineer',  tone: 'violet', sub: 'Full technical detail'  },
 };
 
 function DocumentsLibrary({ onGenerate, onPreview }) {
@@ -526,7 +526,7 @@ function DocumentsGenerate({ onBackToLibrary, onPreview }) {
    this is a mockup; the back-end will swap the body too.
    ───────────────────────────────────────────────────────────────────────── */
 
-function DocumentPreviewModal({ model, ws, env = 'PROD', audience: initialAudience, format: initialFormat, includeLogo = true, generatedAt, sections, status, fromGenerate, onClose, onCommit }) {
+export function DocumentPreviewModal({ model, ws, env = 'PROD', audience: initialAudience, format: initialFormat, includeLogo = true, generatedAt, sections, status, fromGenerate, onClose, onCommit }) {
   const [audience, setAudience] = React.useState(initialAudience || 'analyst');
   const [format, setFormat]     = React.useState(initialFormat || 'docx');
   const [currentPage, setCurrentPage] = React.useState(1);

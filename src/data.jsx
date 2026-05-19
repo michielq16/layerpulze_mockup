@@ -253,6 +253,9 @@ const DATA = {
       { id: 'd8', model: 'Marketing Funnel',        ws: 'Marketing',     audience: 'engineer',  format: 'md',   status: 'current',  schedule: 'off',                                  updated: '5h ago',  updatedAbs: '2026-05-17 06:22 UTC', size: '41.8 KB', tone: 'sky'     },
       { id: 'd9', model: 'Sales Analytics',         ws: 'Finance-Prod',  audience: 'analyst',   format: 'docx', status: 'outdated', schedule: 'off',                                  updated: '11d ago', updatedAbs: '2026-05-06 16:42 UTC', size: '48.3 KB', tone: 'sky'     },
       { id: 'd10',model: 'GL Balances',             ws: 'Finance-Prod',  audience: 'auditor',   format: 'docx', status: 'current',  schedule: 'weekly',  scheduleNext: 'Mon 06:00', updated: '4d ago',  updatedAbs: '2026-05-13 06:00 UTC', size: '22.8 KB', tone: 'rose'    },
+      // Extra Sales Analytics variants so the model-detail docs tab shows all 4 audience renders.
+      { id: 'd11',model: 'Sales Analytics',         ws: 'Finance-Prod',  audience: 'executive', format: 'pdf',  status: 'current',  schedule: 'weekly',  scheduleNext: 'Mon 06:00', updated: '11m ago',  updatedAbs: '2026-05-19 11:24 UTC', size: '12.2 KB', tone: 'amber'   },
+      { id: 'd12',model: 'Sales Analytics',         ws: 'Finance-Prod',  audience: 'engineer',  format: 'docx', status: 'current',  schedule: 'onchange', scheduleNext: 'on model change', updated: '14m ago', updatedAbs: '2026-05-19 11:18 UTC', size: '64.1 KB', tone: 'violet'  },
     ],
 
     // Canonical sample-content block. Powers every rendered preview in the modal — the
