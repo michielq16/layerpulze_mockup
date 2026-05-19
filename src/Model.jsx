@@ -56,7 +56,7 @@ export function ModelView({ wsId, modelId, onBack }) {
         {tab === 'measures' && <ModelMeasures/>}
         {tab === 'lineage' && <ModelLineage/>}
         {tab === 'diagram' && <ModelDiagram/>}
-        {tab === 'docs' && <ModelDocs/>}
+        {tab === 'docs' && <ModelDocs modelName={m.name} workspace={m.workspace} env={m.env}/>}
         {tab === 'ownership' && <ModelOwnership modelName={m.name} workspace={m.workspace}/>}
         {tab === 'ai' && <ModelAI/>}
         {tab === 'health' && <ModelHealth/>}
