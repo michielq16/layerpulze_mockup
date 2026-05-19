@@ -111,10 +111,10 @@ export function Glossary() {
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
               <div className="seg-tabs" title="Switch view">
                 <button className={'seg-tab' + (view === 'cards' ? ' active' : '')} onClick={() => setView('cards')}>
-                  <Icon name="grid" size={12}/><span style={{ marginLeft: 4 }}>Cards</span>
+                  <Icon name="grid" size={12}/>Cards
                 </button>
                 <button className={'seg-tab' + (view === 'az' ? ' active' : '')} onClick={() => setView('az')}>
-                  <Icon name="list-rows" size={12}/><span style={{ marginLeft: 4 }}>A–Z</span>
+                  <Icon name="list-rows" size={12}/>A–Z
                 </button>
               </div>
               {view === 'cards' && (
