@@ -2202,17 +2202,19 @@ select.input::-ms-expand { display: none; }
   outline-offset: 2px;
 }
 
-/* Backdrop */
+/* Backdrop — heavy opacity + blur so the page underneath doesn't bleed
+   through (modal was reading as "messy" with the previous 55% overlay). */
 .doc-modal-backdrop {
   position: fixed; inset: 0;
-  background: oklch(0.10 0.02 250 / 0.55);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: oklch(0.10 0.02 250 / 0.80);
+  backdrop-filter: blur(10px) saturate(0.7);
+  -webkit-backdrop-filter: blur(10px) saturate(0.7);
   z-index: 2000;
   display: flex; align-items: center; justify-content: center;
-  padding: 24px;
+  padding: 18px;
   animation: doc-modal-fade .14s ease-out;
 }
+.dark .doc-modal-backdrop { background: oklch(0.05 0.02 250 / 0.85); }
 @keyframes doc-modal-fade { from { opacity: 0; } to { opacity: 1; } }
 
 /* Modal shell */
@@ -2461,7 +2463,26 @@ select.input::-ms-expand { display: none; }
   font-size: 9pt; background: #eef2ff; color: #1e40af;
   padding: 1px 4px; border-radius: 2px;
 }
-.doc-measure-desc { font-size: 10.5pt; margin: 4px 0 6px; }
+.doc-measure-desc {
+  font-size: 10.5pt; margin: 4px 0 6px;
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+}
+.doc-measure-glossary-tag {
+  font-size: 8.5pt;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  background: #f1f5f9; color: #475569;
+  flex-shrink: 0;
+}
+.doc-measure-glossary-tag[data-tone="sky"]    { background: #dbeafe; color: #1e40af; }
+.doc-measure-glossary-tag[data-tone="violet"] { background: #ede9fe; color: #5b21b6; }
+.doc-measure-glossary-tag[data-tone="amber"]  { background: #fef3c7; color: #92400e; }
+.doc-measure-glossary-tag[data-tone="emerald"]{ background: #d1fae5; color: #065f46; }
+.doc-measure-glossary-tag[data-tone="rose"]   { background: #fee2e2; color: #991b1b; }
 .doc-dax {
   font-family: 'JetBrains Mono', monospace;
   font-size: 9pt; line-height: 1.55;

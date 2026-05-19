@@ -870,23 +870,45 @@ function MeasuresList({ measures, withDax }) {
     <>
       <h2 className="doc-h2">Measures</h2>
       <p className="doc-p doc-p-sub">{measures.length} documented measures across {Array.from(new Set(measures.map(m => m.folder.split(' · ')[0]))).length} folders.</p>
-      {measures.map(m => (
-        <div key={m.name} className="doc-measure">
-          <div className="doc-measure-head">
-            <span className="doc-measure-name mono">{m.name}</span>
-            <span className="doc-measure-folder">{m.folder}</span>
+      {measures.map(m => {
+        // Pull description from the attached business-glossary term
+        // (Metric / KPI) — operator rule: if no glossary term is attached,
+        // the measure renders WITHOUT a description.
+        const attached = DATA.glossary.items.filter(t =>
+          (t.linkedTo?.measures || []).includes(m.name)
+        );
+        const businessTerm = attached[0] || null;
+        const businessDef = businessTerm
+          ? (businessTerm.definition || '').split('. ')[0] + '.'
+          : null;
+        const typeMeta = businessTerm
+          ? DATA.glossary.types.find(t => t.key === businessTerm.type)
+          : null;
+        return (
+          <div key={m.name} className="doc-measure">
+            <div className="doc-measure-head">
+              <span className="doc-measure-name mono">{m.name}</span>
+              <span className="doc-measure-folder">{m.folder}</span>
+            </div>
+            <div className="doc-measure-meta">
+              <span><b>Format:</b> {m.format}</span>
+              <span className="sep">·</span>
+              <span><b>Depends on:</b> {m.dependsOn.map((d, i) => <code key={i} className="mono">{d}</code>).reduce((acc, el, i) => i === 0 ? [el] : [...acc, ', ', el], [])}</span>
+            </div>
+            {businessTerm ? (
+              <div className="doc-measure-desc">
+                <span className="doc-measure-glossary-tag" data-tone={typeMeta?.tone || 'slate'}>
+                  {typeMeta?.label || 'Glossary'} · {businessTerm.term}
+                </span>
+                <span>{businessDef}</span>
+              </div>
+            ) : null}
+            {withDax && (
+              <pre className="doc-dax mono">{m.dax}</pre>
+            )}
           </div>
-          <div className="doc-measure-meta">
-            <span><b>Format:</b> {m.format}</span>
-            <span className="sep">·</span>
-            <span><b>Depends on:</b> {m.dependsOn.map((d, i) => <code key={i} className="mono">{d}</code>).reduce((acc, el, i) => i === 0 ? [el] : [...acc, ', ', el], [])}</span>
-          </div>
-          <div className="doc-measure-desc">{m.desc}</div>
-          {withDax && (
-            <pre className="doc-dax mono">{m.dax}</pre>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </>
   );
 }
