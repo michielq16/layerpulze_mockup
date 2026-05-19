@@ -202,6 +202,7 @@ function OwnershipDrawer({ drawer, onClose }) {
 
   const isAdd      = drawer.kind === 'add-default';
   const isEditDef  = drawer.kind === 'edit-default';
+  const isAddOv    = drawer.kind === 'add-override';
   const isEditOv   = drawer.kind === 'edit-override';
   const isWsOv     = drawer.kind === 'workspace-overrides';
 
@@ -216,6 +217,9 @@ function OwnershipDrawer({ drawer, onClose }) {
   } else if (isEditDef) {
     title = `Edit default · ${drawer.ws}`;
     body = <DefaultForm initialWs={drawer.ws} initialLead={existingWs?.leadEmail || ''} stewards={existingWs?.stewards || 0}/>;
+  } else if (isAddOv) {
+    title = drawer.modelName ? `Override default · ${drawer.modelName}` : 'Add override';
+    body = <OverrideForm initialLead="" initialWhy="" modelHint={drawer.modelName} workspaceHint={drawer.workspace}/>;
   } else if (isEditOv) {
     title = `Edit override · ${existingOv?.model}`;
     body = <OverrideForm initialLead={existingOv?.leadEmail} initialWhy={existingOv?.why}/>;
@@ -312,13 +316,26 @@ function DefaultForm({ initialWs, initialLead, stewards = 0 }) {
   );
 }
 
-function OverrideForm({ initialLead, initialWhy }) {
+function OverrideForm({ initialLead, initialWhy, modelHint, workspaceHint }) {
   const o = DATA.ownership;
   const [lead, setLead] = React.useState(initialLead || '');
   const [why, setWhy]   = React.useState(initialWhy || '');
+  const wsDefault = workspaceHint ? o.workspaceDefaults.find(w => w.ws === workspaceHint) : null;
 
   return (
     <div className="own-form">
+      {(modelHint || workspaceHint) && (
+        <div className="own-form-context">
+          <div className="lp-eyebrow">Overriding default for</div>
+          <div className="own-form-context-body">
+            <div><b>{modelHint}</b> {workspaceHint && <span className="mono own-form-context-ws">{workspaceHint}</span>}</div>
+            {wsDefault?.leadName && (
+              <div className="own-form-context-sub">Workspace default lead is <b>{wsDefault.leadName}</b>. Override only if a downstream user owns this specific report.</div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="own-form-row">
         <label>Override owner</label>
         <select className="input" value={lead} onChange={e => setLead(e.target.value)}>
@@ -382,7 +399,7 @@ export function ModelOwnership({ modelName, workspace }) {
         <div style={{ marginLeft: 'auto' }}>
           {override
             ? <button className="btn btn-outline btn-sm" onClick={() => setDrawer({ kind: 'edit-override', id: override.id })}><Icon name="settings" size={13}/>Edit override</button>
-            : <button className="btn btn-sm doc-gen-cta" onClick={() => setDrawer({ kind: 'add-override' })}><Icon name="plus" size={13}/>Override default</button>
+            : <button className="btn btn-sm doc-gen-cta" onClick={() => setDrawer({ kind: 'add-override', modelName, workspace })}><Icon name="plus" size={13}/>Override default</button>
           }
         </div>
       </div>
