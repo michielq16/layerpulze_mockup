@@ -1144,6 +1144,121 @@ const DATA = {
       { email: 'p.nair@contoso.com',      name: 'Priya Nair',       title: 'Sales BI lead',            groups: ['sg-data-leads', 'sg-sales'] },
       { email: 't.hermanek@contoso.com',  name: 'Tomas Heřmánek',   title: 'EMEA finance analyst',     groups: ['sg-bi-stewards', 'sg-sales-emea'] },
     ],
+
+    /* v2 role taxonomy — Owner lives in workspaceDefaults + overrides;
+       SME (singular) and Stewards (multi) live here keyed by model_id.
+       Business Owner + Technical Owner deferred to v2 (per analysis doc). */
+    rolesPerModel: [
+      // Sales Analytics — full role coverage (showcase model)
+      { modelId: 'sales-analytics', role: 'sme',     userEmail: 't.hermanek@contoso.com', set: '2026-05-08', setBy: 'Alex Rivera',     why: 'Tomas wrote the original revenue model in EMEA; reference SME for any LCY/FX question.' },
+      { modelId: 'sales-analytics', role: 'steward', userEmail: 'm.qureshi@contoso.com',  set: '2026-05-08', setBy: 'Alex Rivera',     why: '' },
+      { modelId: 'sales-analytics', role: 'steward', userEmail: 's.lindqvist@contoso.com',set: '2026-05-08', setBy: 'Alex Rivera',     why: '' },
+
+      // Budget Planning — Owner inherits workspace, SME assigned, no stewards yet
+      { modelId: 'budget-planning', role: 'sme',     userEmail: 'a.rivera@contoso.com',   set: '2026-04-30', setBy: 'Marc Qureshi',    why: '' },
+
+      // Revenue Forecast — Owner overridden (already in `overrides`); + SME + 1 steward
+      { modelId: 'rev-forecast',    role: 'sme',     userEmail: 'a.rivera@contoso.com',   set: '2026-04-22', setBy: 'Marc Qureshi',    why: 'Alex remains the SME even after handing day-to-day owner to Marc.' },
+      { modelId: 'rev-forecast',    role: 'steward', userEmail: 't.hermanek@contoso.com', set: '2026-04-22', setBy: 'Marc Qureshi',    why: '' },
+
+      // Operations Scorecard — large model, full coverage
+      { modelId: 'ops-scorecard',   role: 'sme',     userEmail: 's.lindqvist@contoso.com',set: '2026-04-30', setBy: 'Karim Andersen',  why: '' },
+      { modelId: 'ops-scorecard',   role: 'steward', userEmail: 'k.andersen@contoso.com', set: '2026-04-30', setBy: 'Karim Andersen',  why: '' },
+      { modelId: 'ops-scorecard',   role: 'steward', userEmail: 't.hermanek@contoso.com', set: '2026-04-30', setBy: 'Karim Andersen',  why: '' },
+
+      // RetailOperations — single steward
+      { modelId: 'retail-ops',      role: 'steward', userEmail: 'j.patel@contoso.com',    set: '2026-04-04', setBy: 'Sofia Lindqvist', why: '' },
+
+      // HR Headcount — SME only (audit-sensitive, dedicated SME)
+      { modelId: 'hr-headcount',    role: 'sme',     userEmail: 'j.patel@contoso.com',    set: '2026-05-14', setBy: 'Janice Patel',    why: 'HR data lead is also the SME — same person.' },
+
+      // Marketing Funnel — no roles assigned (orphan case)
+      // Supply Chain Pipeline — no roles (UAT model, never scanned)
+    ],
+
+    /* Domain assignment per model — controlled vocabulary shared with glossary
+       (DATA.glossary.domains). Defaults can be inferred from workspace naming
+       but operator can override. */
+    modelDomains: {
+      'sales-analytics':  'sales',
+      'budget-planning':  'finance',
+      'kpi-dashboard':    'finance',
+      'rev-forecast':     'finance',
+      'expense-pnl':      'finance',
+      'gl-balances':      'finance',
+      'retail-ops':       'ops',
+      'mgmt-change':      'compliance',
+      'ops-scorecard':    'ops',
+      'hr-headcount':     'hr',
+      'marketing-funnel': 'marketing',
+      // 'supply-pipeline': null  — intentionally unassigned
+      // 'mooring-dash':    null
+    },
+
+    /* Per-report Owner overrides — only when a report's owner differs from
+       its semantic model's owner (e.g. a downstream team built a thin report
+       on a shared model). Stays on the same page as model overrides. */
+    reportOverrides: [
+      { id: 'ro1', reportName: 'Sales Pipeline Dashboard', reportKind: 'Report',    modelId: 'sales-analytics', modelName: 'Sales Analytics', ownerEmail: 'p.nair@contoso.com',  ownerName: 'Priya Nair',     why: 'Built by Sales-NA team after Alex shared the model. They own the dashboard; Alex still owns the underlying model.', set: '2026-04-12', setBy: 'Alex Rivera' },
+      { id: 'ro2', reportName: 'CFO Daily Brief',          reportKind: 'Paginated', modelId: 'sales-analytics', modelName: 'Sales Analytics', ownerEmail: 'a.rivera@contoso.com',ownerName: 'Alex Rivera',    why: 'Owner of the model also explicitly owns this CFO-tier brief — separate sign-off responsibility.', set: '2026-03-20', setBy: 'Alex Rivera' },
+      { id: 'ro3', reportName: 'EMEA Sales Scorecard',     reportKind: 'Report',    modelId: 'sales-analytics', modelName: 'Sales Analytics', ownerEmail: 't.hermanek@contoso.com', ownerName: 'Tomas Heřmánek', why: 'Built and maintained by EMEA team. Regional reporting requirements differ from the underlying model.', set: '2026-04-08', setBy: 'Alex Rivera' },
+    ],
+
+    /* AAD workspace permissions — for smart-suggest in role picker.
+       In production this is fetched from Graph; mocked here. */
+    workspacePermissions: {
+      'Finance-Prod': [
+        { email: 'a.rivera@contoso.com',   role: 'admin' },
+        { email: 'm.qureshi@contoso.com',  role: 'admin' },
+        { email: 'p.nair@contoso.com',     role: 'member' },
+        { email: 't.hermanek@contoso.com', role: 'member' },
+        { email: 'k.andersen@contoso.com', role: 'member' },
+      ],
+      'Operations': [
+        { email: 's.lindqvist@contoso.com',role: 'admin' },
+        { email: 't.hermanek@contoso.com', role: 'member' },
+        { email: 'k.andersen@contoso.com', role: 'member' },
+      ],
+      'RetailOps': [
+        { email: 's.lindqvist@contoso.com',role: 'admin' },
+        { email: 'j.patel@contoso.com',    role: 'member' },
+      ],
+      'Ops-Score': [
+        { email: 'k.andersen@contoso.com', role: 'admin' },
+        { email: 's.lindqvist@contoso.com',role: 'member' },
+        { email: 't.hermanek@contoso.com', role: 'member' },
+      ],
+      'Exec-Reports': [
+        { email: 'm.qureshi@contoso.com',  role: 'admin' },
+        { email: 'a.rivera@contoso.com',   role: 'member' },
+      ],
+      'Sales-NA': [
+        { email: 'p.nair@contoso.com',     role: 'admin' },
+        { email: 'a.rivera@contoso.com',   role: 'member' },
+      ],
+      'Sales-EMEA': [
+        { email: 't.hermanek@contoso.com', role: 'admin' },
+      ],
+      'HR-Data': [
+        { email: 'j.patel@contoso.com',    role: 'admin' },
+      ],
+      'Marketing': [
+        { email: 'p.nguyen@contoso.com',   role: 'admin' },
+      ],
+      'Mobile-BI': [
+        { email: 'm.qureshi@contoso.com',  role: 'admin' },
+      ],
+      'Supply-Chain': [],
+      'Customer-Success': [],
+    },
+
+    /* Role taxonomy v1 — Owner + SME + Stewards (per analysis). Business
+       Owner + Technical Owner deferred to v2. */
+    roleCatalog: [
+      { key: 'owner',    label: 'Owner',    tone: 'sky',     cardinality: 'one',  desc: 'Accountable for this artifact. First call for any source-of-truth question.', usedByDoc: 'Cover · Owner field (all audiences). Auditor sign-off.' },
+      { key: 'sme',      label: 'SME',      tone: 'emerald', cardinality: 'one',  desc: 'Subject-matter expert. Answers questions; doesn\'t necessarily maintain.',     usedByDoc: 'Analyst doc · "Questions? Contact:" field. Falls back to Owner.' },
+      { key: 'steward',  label: 'Stewards', tone: 'amber',   cardinality: 'many', desc: 'Reviews changes, approves new measures, monitors quality. Multiple allowed.', usedByDoc: 'Auditor doc · sign-off block (alongside Owner).' },
+    ],
   },
 
   /* ───────────────────────────────────────────────────────────────────────

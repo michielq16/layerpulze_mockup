@@ -3,6 +3,75 @@ import Icon from './Icon';
 import DATA from './data';
 import { StatCard, EnvBadge } from './components';
 
+/* ── Helpers — resolve effective roles + domain for a model ─────────────── */
+
+export function userByEmail(email) {
+  if (!email) return null;
+  return DATA.ownership.aadUsers.find(u => u.email === email) || { email, name: email, title: '' };
+}
+
+export function resolveModelOwner(modelName, workspace) {
+  const o = DATA.ownership;
+  const override  = o.overrides.find(x => x.model === modelName);
+  if (override) {
+    return { name: override.leadName, email: override.leadEmail, source: 'override', set: override.set, setBy: override.setBy, why: override.why };
+  }
+  const wsDefault = o.workspaceDefaults.find(w => w.ws === workspace);
+  if (wsDefault?.leadName) {
+    return { name: wsDefault.leadName, email: wsDefault.leadEmail, source: 'workspace', set: wsDefault.lastReview, setBy: '—', why: null };
+  }
+  return null;
+}
+
+export function resolveModelSme(modelId) {
+  const a = DATA.ownership.rolesPerModel.find(r => r.modelId === modelId && r.role === 'sme');
+  if (!a) return null;
+  const u = userByEmail(a.userEmail);
+  return { ...a, name: u?.name, title: u?.title };
+}
+
+export function resolveModelStewards(modelId) {
+  return DATA.ownership.rolesPerModel
+    .filter(r => r.modelId === modelId && r.role === 'steward')
+    .map(r => ({ ...r, ...userByEmail(r.userEmail) }));
+}
+
+export function resolveModelDomain(modelId) {
+  const key = DATA.ownership.modelDomains[modelId];
+  if (!key) return null;
+  return DATA.glossary.domains.find(d => d.key === key) || { key, label: key };
+}
+
+/* Smart-suggest: order AAD users by their workspace permission tier. */
+export function suggestUsersForWorkspace(workspace) {
+  const o = DATA.ownership;
+  const perms = o.workspacePermissions[workspace] || [];
+  const tier = (email) => {
+    const p = perms.find(x => x.email === email);
+    if (!p) return 2; // not in workspace
+    return p.role === 'admin' ? 0 : 1;
+  };
+  return [...o.aadUsers].sort((a, b) => tier(a.email) - tier(b.email));
+}
+
+export function workspacePermissionTier(email, workspace) {
+  if (!email || !workspace) return null;
+  const perms = DATA.ownership.workspacePermissions[workspace] || [];
+  return perms.find(x => x.email === email)?.role || null;
+}
+
+/* Role-coverage summary per workspace (for /ownership table). */
+export function workspaceRoleCoverage(workspace) {
+  const o = DATA.ownership;
+  const wsModels = DATA.documents.pickerModels.filter(m => m.ws === workspace);
+  const total = wsModels.length;
+  if (total === 0) return { total: 0, ownerSet: 0, smeSet: 0, stewardSet: 0 };
+  const ownerSet   = wsModels.filter(m => resolveModelOwner(m.name, workspace)).length;
+  const smeSet     = wsModels.filter(m => resolveModelSme(m.id)).length;
+  const stewardSet = wsModels.filter(m => resolveModelStewards(m.id).length > 0).length;
+  return { total, ownerSet, smeSet, stewardSet };
+}
+
 /* ─────────────────────────────────────────────────────────────────────────
    /ownership — workspace defaults + per-model overrides
    Manual-data foundation: captures business role assignments that no
@@ -16,6 +85,32 @@ const STATUS = {
   stale:   { label: 'Review overdue', tone: 'amber' },
   missing: { label: 'No owner', tone: 'rose' },
 };
+
+/* Inline cell — 3 stacked mini-bars for Owner / SME / Stewards coverage. */
+function RoleCoverageCell({ cov }) {
+  if (cov.total === 0) return <span className="own-empty">no models</span>;
+  const rows = [
+    { label: 'O', tone: 'sky',     n: cov.ownerSet },
+    { label: 'S', tone: 'emerald', n: cov.smeSet },
+    { label: 'W', tone: 'amber',   n: cov.stewardSet },
+  ];
+  return (
+    <span className="role-cov-cell">
+      {rows.map(r => {
+        const pct = Math.round((r.n / cov.total) * 100);
+        return (
+          <span key={r.label} className="role-cov-row" title={`${r.label === 'O' ? 'Owner' : r.label === 'S' ? 'SME' : 'Stewards'}: ${r.n}/${cov.total} models`}>
+            <span className={'role-cov-label role-cov-label-' + r.tone}>{r.label}</span>
+            <span className="role-cov-bar">
+              <span className={'role-cov-bar-fill role-cov-bar-fill-' + r.tone} style={{ width: pct + '%' }}/>
+            </span>
+            <span className="mono role-cov-num">{r.n}/{cov.total}</span>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
 
 export function Ownership({ onOpenModel }) {
   const o = DATA.ownership;
@@ -95,7 +190,7 @@ export function Ownership({ onOpenModel }) {
           <span>Workspace</span>
           <span>Env</span>
           <span>Default lead</span>
-          <span>Stewards</span>
+          <span>Role coverage</span>
           <span>Overrides</span>
           <span>Last reviewed</span>
           <span>Status</span>
@@ -103,6 +198,7 @@ export function Ownership({ onOpenModel }) {
         </div>
         {filteredWs.map(w => {
           const st = STATUS[w.status];
+          const cov = workspaceRoleCoverage(w.ws);
           return (
             <div key={w.ws} className={'own-ws-row' + (w.status === 'missing' ? ' own-ws-missing' : '')}>
               <span className="own-ws-name">{w.ws}</span>
@@ -118,7 +214,7 @@ export function Ownership({ onOpenModel }) {
                   <span className="own-empty">No default assigned · <a onClick={() => setDrawer({ kind: 'edit-default', ws: w.ws })}>Assign →</a></span>
                 )}
               </span>
-              <span className="mono own-num">{w.stewards}</span>
+              <RoleCoverageCell cov={cov}/>
               <span className="mono own-num">{w.overrides > 0 ? <a onClick={() => setDrawer({ kind: 'workspace-overrides', ws: w.ws })}>{w.overrides}</a> : '—'}</span>
               <span className="mono own-rev">{w.lastReview || <span className="own-empty">never</span>}</span>
               <span><span className={'own-status own-status-' + st.tone}><span className="dot"/>{st.label}</span></span>
@@ -167,6 +263,42 @@ export function Ownership({ onOpenModel }) {
         ))}
       </div>
 
+      {/* ── Per-report overrides section ───────────────────────────── */}
+
+      <div className="lp-section-head" style={{ marginTop: 26 }}>
+        <h2>Per-report overrides <span className="count">{o.reportOverrides.length}</span></h2>
+        <span className="lp-eyebrow">Reports whose owner differs from the underlying semantic model — usually a downstream team built a thin report on a shared model</span>
+      </div>
+
+      <div className="own-override-list fade-in d3">
+        {o.reportOverrides.map(ro => (
+          <div key={ro.id} className="own-override own-override-report">
+            <div className="own-override-main">
+              <div className="own-override-head">
+                <span className="own-override-model">{ro.reportName}</span>
+                <span className="own-override-pill own-override-pill-report">{ro.reportKind}</span>
+                <span className="sep">·</span>
+                <span className="own-override-mc">on <b>{ro.modelName}</b></span>
+              </div>
+              <div className="own-override-why">{ro.why}</div>
+              <div className="own-override-meta">
+                <span><b>Owner now:</b> {ro.ownerName}</span>
+                <span className="sep">·</span>
+                <span className="mono">{ro.ownerEmail}</span>
+                <span className="sep">·</span>
+                <span>Set <b>{ro.set}</b> by {ro.setBy}</span>
+              </div>
+            </div>
+            <div className="own-override-actions">
+              <button className="btn btn-ghost btn-sm" title="Edit override"><Icon name="settings" size={13}/></button>
+            </div>
+          </div>
+        ))}
+        {o.reportOverrides.length === 0 && (
+          <div className="empty" style={{ padding: 20 }}>No report-level overrides. Reports inherit ownership from their semantic model.</div>
+        )}
+      </div>
+
       {/* ── Audit log ─────────────────────────────────────────────── */}
 
       <div className="lp-section-head" style={{ marginTop: 26 }}>
@@ -205,10 +337,15 @@ function OwnershipDrawer({ drawer, onClose }) {
   const isAddOv    = drawer.kind === 'add-override';
   const isEditOv   = drawer.kind === 'edit-override';
   const isWsOv     = drawer.kind === 'workspace-overrides';
+  const isSme      = drawer.kind === 'edit-sme';
+  const isAddStw   = drawer.kind === 'add-steward';
+  const isRmStw    = drawer.kind === 'remove-steward';
+  const isDomain   = drawer.kind === 'change-domain';
 
   const existingWs = isEditDef ? o.workspaceDefaults.find(w => w.ws === drawer.ws) : null;
   const existingOv = isEditOv ? o.overrides.find(x => x.id === drawer.id) : null;
   const wsOverrides = isWsOv ? o.overrides.filter(x => x.ws === drawer.ws) : [];
+  const existingSme = isSme && drawer.modelId ? o.rolesPerModel.find(r => r.modelId === drawer.modelId && r.role === 'sme') : null;
 
   let title, body;
   if (isAdd) {
@@ -218,11 +355,33 @@ function OwnershipDrawer({ drawer, onClose }) {
     title = `Edit default · ${drawer.ws}`;
     body = <DefaultForm initialWs={drawer.ws} initialLead={existingWs?.leadEmail || ''} stewards={existingWs?.stewards || 0}/>;
   } else if (isAddOv) {
-    title = drawer.modelName ? `Override default · ${drawer.modelName}` : 'Add override';
+    title = drawer.modelName ? `Override owner · ${drawer.modelName}` : 'Add override';
     body = <OverrideForm initialLead="" initialWhy="" modelHint={drawer.modelName} workspaceHint={drawer.workspace}/>;
   } else if (isEditOv) {
-    title = `Edit override · ${existingOv?.model}`;
-    body = <OverrideForm initialLead={existingOv?.leadEmail} initialWhy={existingOv?.why}/>;
+    title = `Edit owner override · ${existingOv?.model}`;
+    body = <OverrideForm initialLead={existingOv?.leadEmail} initialWhy={existingOv?.why} workspaceHint={existingOv?.ws}/>;
+  } else if (isSme) {
+    title = `${existingSme ? 'Edit' : 'Assign'} SME · ${drawer.modelName}`;
+    body = <SmeForm initialLead={existingSme?.userEmail || ''} initialWhy={existingSme?.why || ''} workspaceHint={drawer.workspace} modelHint={drawer.modelName}/>;
+  } else if (isAddStw) {
+    title = `Add steward · ${drawer.modelName}`;
+    body = <StewardForm workspaceHint={drawer.workspace} modelHint={drawer.modelName}/>;
+  } else if (isRmStw) {
+    title = `Remove steward · ${drawer.modelName}`;
+    body = (
+      <div className="own-form">
+        <div className="own-form-context">
+          <div className="lp-eyebrow">Removing</div>
+          <div className="own-form-context-body">
+            <div><b>{userByEmail(drawer.userEmail)?.name}</b> <span className="mono own-form-context-ws">{drawer.userEmail}</span></div>
+            <div className="own-form-context-sub">This will remove the steward role only. The user keeps any other roles + workspace permissions.</div>
+          </div>
+        </div>
+      </div>
+    );
+  } else if (isDomain) {
+    title = `${drawer.currentDomain ? 'Change' : 'Set'} domain · ${drawer.modelName}`;
+    body = <DomainForm initialDomain={drawer.currentDomain} modelHint={drawer.modelName}/>;
   } else if (isWsOv) {
     title = `Overrides in ${drawer.ws}`;
     body = (
@@ -316,21 +475,39 @@ function DefaultForm({ initialWs, initialLead, stewards = 0 }) {
   );
 }
 
+/* Smart-suggest user picker — sorts admins/members of the workspace to the top. */
+function UserSelect({ value, onChange, workspace, placeholder = '— Pick a user —' }) {
+  const sorted = workspace ? suggestUsersForWorkspace(workspace) : DATA.ownership.aadUsers;
+  return (
+    <select className="input" value={value} onChange={e => onChange(e.target.value)}>
+      <option value="">{placeholder}</option>
+      {sorted.map(u => {
+        const tier = workspacePermissionTier(u.email, workspace);
+        const badge = tier === 'admin' ? '★ Admin · ' : tier === 'member' ? '· Member · ' : '— ';
+        return <option key={u.email} value={u.email}>{badge}{u.name} · {u.title}</option>;
+      })}
+    </select>
+  );
+}
+
 function OverrideForm({ initialLead, initialWhy, modelHint, workspaceHint }) {
   const o = DATA.ownership;
   const [lead, setLead] = React.useState(initialLead || '');
   const [why, setWhy]   = React.useState(initialWhy || '');
   const wsDefault = workspaceHint ? o.workspaceDefaults.find(w => w.ws === workspaceHint) : null;
+  const perms = workspaceHint ? o.workspacePermissions[workspaceHint] : null;
+  const adminCount = perms ? perms.filter(p => p.role === 'admin').length : 0;
+  const memberCount = perms ? perms.filter(p => p.role === 'member').length : 0;
 
   return (
     <div className="own-form">
       {(modelHint || workspaceHint) && (
         <div className="own-form-context">
-          <div className="lp-eyebrow">Overriding default for</div>
+          <div className="lp-eyebrow">Overriding Owner for</div>
           <div className="own-form-context-body">
             <div><b>{modelHint}</b> {workspaceHint && <span className="mono own-form-context-ws">{workspaceHint}</span>}</div>
             {wsDefault?.leadName && (
-              <div className="own-form-context-sub">Workspace default lead is <b>{wsDefault.leadName}</b>. Override only if a downstream user owns this specific report.</div>
+              <div className="own-form-context-sub">Workspace default Owner is <b>{wsDefault.leadName}</b>. Override only when a downstream user owns this specific report.</div>
             )}
           </div>
         </div>
@@ -338,10 +515,10 @@ function OverrideForm({ initialLead, initialWhy, modelHint, workspaceHint }) {
 
       <div className="own-form-row">
         <label>Override owner</label>
-        <select className="input" value={lead} onChange={e => setLead(e.target.value)}>
-          <option value="">— Pick a user —</option>
-          {o.aadUsers.map(u => <option key={u.email} value={u.email}>{u.name} · {u.title}</option>)}
-        </select>
+        <UserSelect value={lead} onChange={setLead} workspace={workspaceHint}/>
+        {workspaceHint && (
+          <div className="own-form-hint">Smart-suggest: <b>{adminCount}</b> workspace Admin · <b>{memberCount}</b> Member — listed first.</div>
+        )}
       </div>
 
       <div className="own-form-row">
@@ -354,80 +531,211 @@ function OverrideForm({ initialLead, initialWhy, modelHint, workspaceHint }) {
   );
 }
 
-/* ── ModelOwnership — reused inside /models/[id]/ownership tab ────────── */
+/* SME assignment (singular) */
+function SmeForm({ initialLead, initialWhy, modelHint, workspaceHint }) {
+  const [lead, setLead] = React.useState(initialLead || '');
+  const [why, setWhy]   = React.useState(initialWhy || '');
+
+  return (
+    <div className="own-form">
+      <div className="own-form-context">
+        <div className="lp-eyebrow">SME for</div>
+        <div className="own-form-context-body">
+          <div><b>{modelHint}</b> <span className="mono own-form-context-ws">{workspaceHint}</span></div>
+          <div className="own-form-context-sub">The SME is the knowledge-holder — the person new analysts contact with questions. The Analyst document uses this name as the "Questions? Contact:" field; if blank, it falls back to the Owner.</div>
+        </div>
+      </div>
+
+      <div className="own-form-row">
+        <label>SME</label>
+        <UserSelect value={lead} onChange={setLead} workspace={workspaceHint}/>
+        <div className="own-form-hint">Often someone other than the Owner — the SME knows the data; the Owner is accountable for it.</div>
+      </div>
+
+      <div className="own-form-row">
+        <label>Why (optional)</label>
+        <textarea className="input" rows={3} value={why} onChange={e => setWhy(e.target.value)}
+          placeholder="Optional context, e.g. 'Wrote the original DAX; reference for any time-intelligence question.'"/>
+      </div>
+    </div>
+  );
+}
+
+/* Steward assignment (multi) */
+function StewardForm({ modelHint, workspaceHint }) {
+  const [lead, setLead] = React.useState('');
+
+  return (
+    <div className="own-form">
+      <div className="own-form-context">
+        <div className="lp-eyebrow">Adding steward to</div>
+        <div className="own-form-context-body">
+          <div><b>{modelHint}</b> <span className="mono own-form-context-ws">{workspaceHint}</span></div>
+          <div className="own-form-context-sub">Stewards review changes, approve new measures, and back up the Owner. The Auditor document sign-off block credits all stewards.</div>
+        </div>
+      </div>
+
+      <div className="own-form-row">
+        <label>Steward</label>
+        <UserSelect value={lead} onChange={setLead} workspace={workspaceHint}/>
+      </div>
+    </div>
+  );
+}
+
+/* Domain assignment */
+function DomainForm({ initialDomain, modelHint }) {
+  const [domain, setDomain] = React.useState(initialDomain || '');
+  const domains = DATA.glossary.domains;
+
+  return (
+    <div className="own-form">
+      <div className="own-form-context">
+        <div className="lp-eyebrow">Tagging domain for</div>
+        <div className="own-form-context-body">
+          <div><b>{modelHint}</b></div>
+          <div className="own-form-context-sub">Domain is the business area this model serves (e.g. Finance, Sales). Used to filter the glossary by relevant terms and to group models across workspaces.</div>
+        </div>
+      </div>
+
+      <div className="own-form-row">
+        <label>Domain</label>
+        <div className="own-domain-grid">
+          {domains.map(d => (
+            <button key={d.key} className={'own-domain-tab' + (domain === d.key ? ' active' : '')} onClick={() => setDomain(d.key)}>
+              {d.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── ModelOwnership — /models/[id]/ownership tab (v2: 3 roles + domain) ── */
 
 export function ModelOwnership({ modelName, workspace }) {
   const o = DATA.ownership;
-  const wsDefault = o.workspaceDefaults.find(w => w.ws === workspace);
-  const override  = o.overrides.find(x => x.model === modelName);
-  const audit     = o.auditLog.filter(a => a.change.includes(modelName) || a.change.includes(workspace));
+  const modelId = (DATA.documents.pickerModels.find(m => m.name === modelName) || {}).id;
+  const owner    = resolveModelOwner(modelName, workspace);
+  const sme      = modelId ? resolveModelSme(modelId) : null;
+  const stewards = modelId ? resolveModelStewards(modelId) : [];
+  const domain   = modelId ? resolveModelDomain(modelId) : null;
+  const audit    = o.auditLog.filter(a => a.change.includes(modelName) || a.change.includes(workspace));
   const [drawer, setDrawer] = React.useState(null);
 
   return (
     <>
       <div className="lp-section-head">
-        <h2>Inherited from workspace</h2>
-        {wsDefault && <span className="lp-eyebrow">Default for all models in <b>{workspace}</b></span>}
+        <h2>Roles for this model</h2>
+        <span className="lp-eyebrow">Owner inherits from workspace default unless overridden. SME &amp; Stewards live on the model.</span>
       </div>
 
-      {wsDefault ? (
-        <div className="model-own-block fade-in">
-          <div className="model-own-card">
-            <div className="model-own-card-head">
-              <div className="own-avatar own-avatar-lg">{wsDefault.leadName?.split(' ').map(n => n[0]).slice(0,2).join('') || '?'}</div>
-              <div>
-                <div className="model-own-lead">{wsDefault.leadName || '—'}</div>
-                <div className="model-own-role">Data lead · {workspace}</div>
-                <div className="mono model-own-mail">{wsDefault.leadEmail || '—'}</div>
+      <div className="model-role-grid fade-in">
+
+        {/* OWNER */}
+        <div className="model-role-card">
+          <div className="model-role-head">
+            <span className={'model-role-pill model-role-pill-sky'}>Owner</span>
+            <span className="model-role-source">{owner ? (owner.source === 'override' ? 'Override on model' : 'Inherited from workspace') : 'Not set'}</span>
+            <div className="model-role-actions">
+              {owner?.source === 'override'
+                ? <button className="btn btn-ghost btn-sm" onClick={() => setDrawer({ kind: 'edit-override', id: o.overrides.find(x => x.model === modelName)?.id })}><Icon name="settings" size={12}/>Edit</button>
+                : <button className="btn btn-ghost btn-sm" onClick={() => setDrawer({ kind: 'add-override', modelName, workspace })}><Icon name="plus" size={12}/>Override</button>
+              }
+            </div>
+          </div>
+          {owner ? (
+            <div className="model-role-body">
+              <div className="own-avatar own-avatar-lg">{owner.name?.split(' ').map(n => n[0]).slice(0,2).join('') || '?'}</div>
+              <div className="model-role-person">
+                <div className="model-role-name">{owner.name}</div>
+                <div className="mono model-role-mail">{owner.email}</div>
+                {owner.source === 'override' && owner.why && <div className="model-role-why">{owner.why}</div>}
               </div>
             </div>
-            <div className="model-own-card-meta">
-              <div><span className="lp-eyebrow">Stewards</span><span className="mono">{wsDefault.stewards}</span></div>
-              <div><span className="lp-eyebrow">Last reviewed</span><span className="mono">{wsDefault.lastReview || '—'}</span></div>
-              <div><span className="lp-eyebrow">Status</span><span className={'own-status own-status-' + STATUS[wsDefault.status].tone}><span className="dot"/>{STATUS[wsDefault.status].label}</span></div>
+          ) : (
+            <div className="model-role-empty">No owner set. Inherits from workspace default; workspace has none. <a onClick={() => setDrawer({ kind: 'add-override', modelName, workspace })}>Assign →</a></div>
+          )}
+        </div>
+
+        {/* SME */}
+        <div className="model-role-card">
+          <div className="model-role-head">
+            <span className={'model-role-pill model-role-pill-emerald'}>SME</span>
+            <span className="model-role-source">{sme ? 'Set on this model' : 'Not assigned · falls back to Owner'}</span>
+            <div className="model-role-actions">
+              <button className="btn btn-ghost btn-sm" onClick={() => setDrawer({ kind: 'edit-sme', modelId, modelName, workspace })}>
+                <Icon name={sme ? 'settings' : 'plus'} size={12}/>{sme ? 'Edit' : 'Assign'}
+              </button>
             </div>
           </div>
+          {sme ? (
+            <div className="model-role-body">
+              <div className="own-avatar own-avatar-lg">{sme.name?.split(' ').map(n => n[0]).slice(0,2).join('') || '?'}</div>
+              <div className="model-role-person">
+                <div className="model-role-name">{sme.name}</div>
+                <div className="mono model-role-mail">{sme.userEmail}</div>
+                {sme.title && <div className="model-role-title">{sme.title}</div>}
+                {sme.why && <div className="model-role-why">{sme.why}</div>}
+              </div>
+            </div>
+          ) : (
+            <div className="model-role-empty">No SME assigned. The Analyst document will use the Owner as the "Questions? Contact:" field.</div>
+          )}
         </div>
-      ) : (
-        <div className="lp-card" style={{ padding: 18 }}>
-          <div className="own-empty"><Icon name="alert" size={14} style={{ marginRight: 6 }}/>No workspace default set. <a>Assign one →</a></div>
-        </div>
-      )}
 
-      <div className="lp-section-head" style={{ marginTop: 24 }}>
-        <h2>Override for this model</h2>
-        <div style={{ marginLeft: 'auto' }}>
-          {override
-            ? <button className="btn btn-outline btn-sm" onClick={() => setDrawer({ kind: 'edit-override', id: override.id })}><Icon name="settings" size={13}/>Edit override</button>
-            : <button className="btn btn-sm doc-gen-cta" onClick={() => setDrawer({ kind: 'add-override', modelName, workspace })}><Icon name="plus" size={13}/>Override default</button>
-          }
+        {/* STEWARDS */}
+        <div className="model-role-card model-role-card-wide">
+          <div className="model-role-head">
+            <span className={'model-role-pill model-role-pill-amber'}>Stewards</span>
+            <span className="model-role-source">{stewards.length} assigned</span>
+            <div className="model-role-actions">
+              <button className="btn btn-ghost btn-sm" onClick={() => setDrawer({ kind: 'add-steward', modelId, modelName, workspace })}><Icon name="plus" size={12}/>Add steward</button>
+            </div>
+          </div>
+          {stewards.length > 0 ? (
+            <div className="model-stewards-list">
+              {stewards.map(s => (
+                <div key={s.userEmail} className="model-steward-row">
+                  <div className="own-avatar">{s.name?.split(' ').map(n => n[0]).slice(0,2).join('') || '?'}</div>
+                  <div className="model-steward-main">
+                    <div className="model-steward-name">{s.name}</div>
+                    <div className="mono model-steward-mail">{s.userEmail}</div>
+                  </div>
+                  <div className="model-steward-meta">Set {s.set} by {s.setBy}</div>
+                  <button className="btn btn-ghost btn-sm" title="Remove" onClick={() => setDrawer({ kind: 'remove-steward', modelId, modelName, userEmail: s.userEmail })}><Icon name="x" size={12}/></button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="model-role-empty">No stewards assigned. The Auditor document sign-off block will only credit the Owner.</div>
+          )}
+        </div>
+
+        {/* DOMAIN */}
+        <div className="model-role-card">
+          <div className="model-role-head">
+            <span className={'model-role-pill model-role-pill-violet'}>Domain</span>
+            <span className="model-role-source">{domain ? 'Tagged' : 'Untagged'}</span>
+            <div className="model-role-actions">
+              <button className="btn btn-ghost btn-sm" onClick={() => setDrawer({ kind: 'change-domain', modelId, modelName, currentDomain: domain?.key })}><Icon name="settings" size={12}/>{domain ? 'Change' : 'Set'}</button>
+            </div>
+          </div>
+          {domain ? (
+            <div className="model-role-body" style={{ alignItems: 'center' }}>
+              <div className="model-domain-chip">{domain.label}</div>
+              <div className="model-role-title" style={{ marginLeft: 'auto' }}>Used by glossary filter &amp; cross-workspace grouping.</div>
+            </div>
+          ) : (
+            <div className="model-role-empty">Untagged. <a onClick={() => setDrawer({ kind: 'change-domain', modelId, modelName })}>Tag a domain →</a> (e.g. Finance, Sales) — helps filter the glossary and group cross-workspace.</div>
+          )}
         </div>
       </div>
-
-      {override ? (
-        <div className="own-override fade-in d2" style={{ marginTop: 0 }}>
-          <div className="own-override-main">
-            <div className="own-override-head">
-              <span className="own-override-model">{override.leadName}</span>
-              <span className="own-override-pill">Override</span>
-            </div>
-            <div className="own-override-why">{override.why}</div>
-            <div className="own-override-meta">
-              <span className="mono">{override.leadEmail}</span>
-              <span className="sep">·</span>
-              <span>Set <b>{override.set}</b> by {override.setBy}</span>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="lp-card" style={{ padding: 18 }}>
-          <div className="own-empty">No override — inherits workspace default. Add an override only when a downstream user owns this specific report.</div>
-        </div>
-      )}
 
       {audit.length > 0 && (
         <>
-          <div className="lp-section-head" style={{ marginTop: 24 }}>
+          <div className="lp-section-head" style={{ marginTop: 28 }}>
             <h2>Activity</h2>
             <span className="lp-eyebrow">Changes touching this model or workspace</span>
           </div>
@@ -445,5 +753,80 @@ export function ModelOwnership({ modelName, workspace }) {
 
       {drawer && <OwnershipDrawer drawer={drawer} onClose={() => setDrawer(null)}/>}
     </>
+  );
+}
+
+/* ── RolePanel — read-only role display for /models/[id]/overview ──────── */
+
+export function RolePanel({ modelName, workspace, onEdit }) {
+  const modelId = (DATA.documents.pickerModels.find(m => m.name === modelName) || {}).id;
+  const owner    = resolveModelOwner(modelName, workspace);
+  const sme      = modelId ? resolveModelSme(modelId) : null;
+  const stewards = modelId ? resolveModelStewards(modelId) : [];
+  const domain   = modelId ? resolveModelDomain(modelId) : null;
+
+  const Tile = ({ tone, label, source, person, missing, extra }) => (
+    <div className="role-panel-tile">
+      <div className="role-panel-head">
+        <span className={'model-role-pill model-role-pill-' + tone}>{label}</span>
+        {source && <span className="role-panel-source">{source}</span>}
+      </div>
+      {person ? (
+        <div className="role-panel-person">
+          <div className="own-avatar">{person.name?.split(' ').map(n => n[0]).slice(0,2).join('') || '?'}</div>
+          <div>
+            <div className="role-panel-name">{person.name}</div>
+            <div className="mono role-panel-mail">{person.email || person.userEmail}</div>
+          </div>
+        </div>
+      ) : extra ? extra : (
+        <div className="role-panel-missing">{missing}</div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="role-panel fade-in">
+      <div className="role-panel-head-row">
+        <div className="lp-eyebrow">Roles &amp; ownership</div>
+        <a className="role-panel-edit" onClick={onEdit}>Edit in Ownership tab <Icon name="arrow-right" size={11}/></a>
+      </div>
+      <div className="role-panel-grid">
+        <Tile
+          tone="sky" label="Owner"
+          source={owner?.source === 'override' ? 'Override' : owner ? 'Inherited' : '—'}
+          person={owner}
+          missing="Not set — assign in Ownership tab"
+        />
+        <Tile
+          tone="emerald" label="SME"
+          source={sme ? 'Set' : 'Falls back to Owner'}
+          person={sme && { name: sme.name, email: sme.userEmail }}
+          missing="—"
+        />
+        <Tile
+          tone="amber" label="Stewards"
+          source={`${stewards.length} assigned`}
+          extra={stewards.length > 0 ? (
+            <div className="role-panel-stewards">
+              {stewards.slice(0, 3).map(s => (
+                <div key={s.userEmail} className="role-panel-steward" title={s.userEmail}>
+                  <div className="own-avatar own-avatar-sm">{s.name?.split(' ').map(n => n[0]).slice(0,2).join('')}</div>
+                  <span>{s.name?.split(' ')[0]}</span>
+                </div>
+              ))}
+              {stewards.length > 3 && <span className="role-panel-more">+{stewards.length - 3} more</span>}
+            </div>
+          ) : null}
+          missing="No stewards assigned"
+        />
+        <Tile
+          tone="violet" label="Domain"
+          source={domain ? 'Tagged' : '—'}
+          extra={domain ? <div className="model-domain-chip">{domain.label}</div> : null}
+          missing="Untagged"
+        />
+      </div>
+    </div>
   );
 }

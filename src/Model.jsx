@@ -3,7 +3,7 @@ import Icon from './Icon';
 import DATA from './data';
 import { EnvBadge, Provenance, IssueCard, Badge } from './components';
 import { ModelDiagram, ModelDocs, ModelAI, ModelHealth, ModelReports, ModelDataflows } from './ModelTabs';
-import { ModelOwnership } from './Ownership';
+import { ModelOwnership, RolePanel } from './Ownership';
 
 export function ModelView({ wsId, modelId, onBack }) {
   const [tab, setTab] = React.useState('overview');
@@ -52,7 +52,7 @@ export function ModelView({ wsId, modelId, onBack }) {
       </div>
 
       <div key={tab} className="fade-in">
-        {tab === 'overview' && <ModelOverview m={m}/>}
+        {tab === 'overview' && <ModelOverview m={m} onGoToOwnership={() => setTab('ownership')}/>}
         {tab === 'measures' && <ModelMeasures/>}
         {tab === 'lineage' && <ModelLineage/>}
         {tab === 'diagram' && <ModelDiagram/>}
@@ -67,9 +67,10 @@ export function ModelView({ wsId, modelId, onBack }) {
   );
 }
 
-function ModelOverview({ m }) {
+function ModelOverview({ m, onGoToOwnership }) {
   return (
     <>
+      <RolePanel modelName={m.name} workspace={m.workspace} onEdit={onGoToOwnership}/>
       <div className="lp-grid-money">
         <div className="lp-card fade-in">
           <div className="lp-card-header">
