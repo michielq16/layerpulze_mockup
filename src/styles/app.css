@@ -2826,17 +2826,22 @@ select.input::-ms-expand { display: none; }
 .role-cov-bar {
   height: 6px; border-radius: 3px;
   background: var(--muted);
-  transition: background .2s ease;
+  overflow: hidden;
+  position: relative;
 }
-/* Threshold tones — green (full) · amber (partial) · red (low/empty). */
-.role-cov-bar-tier-full    { background: oklch(0.62 0.17 145); }
-.role-cov-bar-tier-partial { background: oklch(0.72 0.18 75);  }
-.role-cov-bar-tier-low     { background: oklch(0.62 0.22 25);  }
-.role-cov-bar-tier-empty   { background: oklch(0.86 0.06 25);  }
-.dark .role-cov-bar-tier-full    { background: oklch(0.55 0.16 145); }
-.dark .role-cov-bar-tier-partial { background: oklch(0.62 0.16 75);  }
-.dark .role-cov-bar-tier-low     { background: oklch(0.55 0.20 25);  }
-.dark .role-cov-bar-tier-empty   { background: oklch(0.32 0.08 25);  }
+/* Inner fill is proportional to coverage; color is threshold-tone. */
+.role-cov-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width .2s ease, background .2s ease;
+}
+.role-cov-bar-fill-full    { background: oklch(0.62 0.17 145); }   /* green */
+.role-cov-bar-fill-partial { background: oklch(0.72 0.18 75);  }   /* amber */
+.role-cov-bar-fill-low     { background: oklch(0.62 0.22 25);  }   /* red */
+.role-cov-bar-fill-empty   { background: transparent; }            /* 0% — track shows */
+.dark .role-cov-bar-fill-full    { background: oklch(0.55 0.16 145); }
+.dark .role-cov-bar-fill-partial { background: oklch(0.62 0.16 75);  }
+.dark .role-cov-bar-fill-low     { background: oklch(0.55 0.20 25);  }
 .role-cov-num { font-size: 10px; color: var(--muted-foreground); text-align: right; }
 
 /* Report override variant */
