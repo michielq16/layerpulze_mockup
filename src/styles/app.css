@@ -3623,3 +3623,45 @@ select.input::-ms-expand { display: none; }
 }
 .measure-glossary-card-foot svg { opacity: 0.7; flex-shrink: 0; }
 .measure-glossary-card-foot .sep { opacity: 0.5; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Document modal — new automated sections (quality / refresh / access /
+   adoption) + inline glossary tag on column descriptions
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Quality / maturity */
+.doc-quality { display: flex; align-items: center; gap: 24px; margin: 8px 0 4px; }
+.doc-quality-score { display: flex; align-items: baseline; gap: 4px; flex-shrink: 0; }
+.doc-quality-num { font-size: 44pt; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+.doc-quality-out { font-size: 12pt; color: #94a3b8; }
+.doc-quality-bars { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.doc-quality-row { display: grid; grid-template-columns: 110px 1fr 32px; gap: 10px; align-items: center; font-size: 9.5pt; }
+.doc-quality-dim { font-family: 'DM Sans', sans-serif; }
+.doc-quality-track { height: 7px; border-radius: 4px; background: #e2e8f0; overflow: hidden; }
+.doc-quality-fill { display: block; height: 100%; border-radius: 4px; }
+.doc-quality-val { font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right; }
+
+/* Access role pills */
+.doc-access-role {
+  display: inline-block; font-size: 8.5pt; font-weight: 700;
+  padding: 1px 7px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.03em;
+  font-family: 'DM Sans', sans-serif;
+}
+.doc-access-role-admin { background: #fee2e2; color: #991b1b; }
+.doc-access-role-build { background: #ede9fe; color: #5b21b6; }
+.doc-access-role-read  { background: #dbeafe; color: #1e40af; }
+
+/* Inline glossary tag in column description cell */
+.doc-col-gloss-tag {
+  font-size: 7.5pt; font-weight: 700;
+  font-family: 'DM Sans', sans-serif;
+  padding: 1px 5px; border-radius: 2px;
+  letter-spacing: 0.03em;
+  background: #f1f5f9; color: #475569;
+  margin-right: 5px;
+}
+.doc-col-gloss-tag[data-tone="sky"]    { background: #dbeafe; color: #1e40af; }
+.doc-col-gloss-tag[data-tone="violet"] { background: #ede9fe; color: #5b21b6; }
+.doc-col-gloss-tag[data-tone="amber"]  { background: #fef3c7; color: #92400e; }
+.doc-col-gloss-tag[data-tone="emerald"]{ background: #d1fae5; color: #065f46; }
+.doc-col-gloss-tag[data-tone="rose"]   { background: #fee2e2; color: #991b1b; }

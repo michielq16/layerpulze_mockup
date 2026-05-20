@@ -459,6 +459,67 @@ const DATA = {
           { name: 'DimGeography', x:  60, y: 340, kind: 'dim'  },
         ],
       },
+
+      /* AUTOMATED sections — Fabric API + LP collectors. Combine with the
+         MANUAL ownership + glossary data to produce the complete document. */
+
+      // Model maturity / quality score (LP rules engine — same shape as /models overview)
+      quality: {
+        score: 9.2, tier: 'Platinum', trend: 0.2,
+        breakdown: [
+          { dim: 'Naming',         val: 9.5 },
+          { dim: 'Sources',        val: 8.9 },
+          { dim: 'Performance',    val: 8.1 },
+          { dim: 'Structure',      val: 9.8 },
+          { dim: 'Hygiene',        val: 7.0 },
+          { dim: 'Discoverability',val: 5.5 },
+        ],
+        weakest: 'Discoverability',
+        note: 'Discoverability is the weakest dimension — 14 of 156 columns lack descriptions and 18 measures have no business-glossary term attached.',
+      },
+
+      // Refresh history (Refreshables endpoint + activity_events). Stale refreshes
+      // = stale data = "not trustworthy" — surfaced for analyst + auditor + engineer.
+      refresh: {
+        schedule: 'Daily · 04:00 UTC',
+        lastRefresh: '2026-05-20 04:02 UTC',
+        lastStatus: 'success',
+        avgDurationMin: 7.4,
+        windows: [
+          { window: 'Last 24h', runs: 1,  ok: 1,  failed: 0 },
+          { window: 'Last 7d',  runs: 7,  ok: 6,  failed: 1 },
+          { window: 'Last 30d', runs: 30, ok: 27, failed: 3 },
+          { window: 'Last 90d', runs: 90, ok: 84, failed: 6 },
+        ],
+        recentFailures: [
+          { date: '2026-05-14 04:01 UTC', reason: 'Gateway timeout — source crm.customers unreachable for 15 min' },
+          { date: '2026-05-08 04:00 UTC', reason: 'DAX error in [Net Revenue Retention %] — circular dependency (since fixed)' },
+          { date: '2026-04-29 04:03 UTC', reason: 'Capacity throttled — F64 at 100% CU during the refresh window' },
+        ],
+      },
+
+      // Access (Admin API permissions + AAD Graph group expansion). Engineer
+      // uses this to verify RLS scoping; auditor uses it as a who-can-read control.
+      access: [
+        { principal: 'Alex Rivera',         kind: 'User',  role: 'Admin', members: null, source: 'Workspace Admin',   rls: 'Bypass (admin sees all)' },
+        { principal: 'sg-fin-data',         kind: 'Group', role: 'Build', members: 18,   source: 'Workspace Member',  rls: 'Bypass (build role)' },
+        { principal: 'sg-bi-stewards',      kind: 'Group', role: 'Build', members: 6,    source: 'Workspace Member',  rls: 'Bypass (build role)' },
+        { principal: 'sg-sales-na',         kind: 'Group', role: 'Read',  members: 42,   source: 'App audience',      rls: 'Region · NA' },
+        { principal: 'sg-sales-emea',       kind: 'Group', role: 'Read',  members: 28,   source: 'App audience',      rls: 'Region · EMEA' },
+        { principal: 'sg-sales-apac',       kind: 'Group', role: 'Read',  members: 19,   source: 'App audience',      rls: 'Region · APAC' },
+        { principal: 'sg-exec',             kind: 'Group', role: 'Read',  members: 12,   source: 'App audience',      rls: 'No filter (sees all regions)' },
+        { principal: 'sg-smb-team',         kind: 'Group', role: 'Read',  members: 9,    source: 'Direct grant',      rls: 'SMB segment only' },
+      ],
+
+      // Adoption (activity_events on downstream reports). Reach + dormancy.
+      adoption: {
+        dau: 42, wau: 168, mau: 284,
+        totalViewers30d: 312,
+        totalOpens30d: 9840,
+        dormantReports: 2,
+        newReaders30d: 47,
+        trend30: [88,92,104,96,118,142,138,101,87,95,112,128,134,122,108,98,132,148,156,144,128,112,94,106,124,138,152,146,134,118],
+      },
     },
   },
 
