@@ -2499,6 +2499,27 @@ select.input::-ms-expand { display: none; }
   margin: 4px 0 0;
 }
 
+/* Power Query (M) blocks — green-on-dark to distinguish from gold DAX */
+.doc-mquery { margin: 0 0 12px; }
+.doc-mquery-head {
+  display: flex; align-items: baseline; gap: 10px;
+  margin-bottom: 4px;
+}
+.doc-mquery-table { font-size: 11pt; font-weight: 700; color: #0D3159; }
+.doc-mquery-meta { font-size: 9pt; color: #64748b; }
+.doc-mcode {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5pt; line-height: 1.55;
+  background: #0d2018;
+  color: #7ee0a0;
+  padding: 10px 14px;
+  border-radius: 3px;
+  white-space: pre;
+  overflow-x: auto;
+  margin: 0;
+  border-left: 3px solid #16a34a;
+}
+
 /* RLS state */
 .doc-rls-state {
   font-size: 8.5pt; padding: 1px 6px; border-radius: 3px;

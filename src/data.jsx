@@ -460,6 +460,18 @@ const DATA = {
         ],
       },
 
+      /* Power Query (M) — the ingestion/transform layer. Extracted from the
+         model's partition definitions via Scanner getDefinition / TMDL.
+         DAX is the analytics layer; M is how each table is loaded + shaped. */
+      mQueries: [
+        { table: 'FactSales', source: 'Lakehouse · sales_curated.fact_sales_gold', kind: 'Import',
+          m: 'let\n    Source = Lakehouse.Contents(null){[workspaceId = "f64-prod-we"]}[Data],\n    curated = Source{[Id = "sales_curated", ItemKind = "Lakehouse"]}[Data],\n    fact = curated{[Id = "fact_sales_gold", ItemKind = "Table"]}[Data],\n    KeepProd = Table.SelectRows(fact, each [OrderDate] >= #date(2022, 1, 1)),\n    DropInternal = Table.RemoveColumns(KeepProd, {"_hash", "etl_batch_id", "_loaded_at"}),\n    NetAmount = Table.AddColumn(DropInternal, "NetAmountLCY",\n        each [Quantity] * [UnitPrice] * (1 - [DiscountPct]), type number),\n    Typed = Table.TransformColumnTypes(NetAmount, {\n        {"SalesKey", Int64.Type}, {"DateKey", Int64.Type},\n        {"NetAmountLCY", type number}, {"CostLCY", type number}\n    })\nin\n    Typed' },
+        { table: 'DimCustomer', source: 'Dataflow Gen2 · crm.customers', kind: 'Import',
+          m: 'let\n    Source = PowerPlatform.Dataflows(null),\n    ws = Source{[workspaceId = "f64-prod-we"]}[Data],\n    crm = ws{[dataflowId = "crm-sync"]}[Data],\n    customers = crm{[entity = "customers"]}[Data],\n    Segment = Table.AddColumn(customers, "Segment",\n        each if [ARR] >= 10000000 then "Enterprise"\n             else if [ARR] >= 1000000 then "Mid-Market"\n             else "SMB", type text),\n    Renamed = Table.RenameColumns(Segment, {{"cust_id", "CustomerID"}, {"cust_name", "CustomerName"}})\nin\n    Renamed' },
+        { table: 'DimDate', source: 'Static seed · date.dim_date', kind: 'Import',
+          m: 'let\n    Start = #date(1990, 1, 1),\n    End = #date(2030, 12, 31),\n    Days = Duration.Days(End - Start) + 1,\n    Dates = List.Dates(Start, Days, #duration(1, 0, 0, 0)),\n    Tbl = Table.FromList(Dates, Splitter.SplitByNothing(), {"Date"}),\n    Cols = Table.AddColumn(Tbl, "DateKey",\n        each Date.Year([Date]) * 10000 + Date.Month([Date]) * 100 + Date.Day([Date]), Int64.Type),\n    Fiscal = Table.AddColumn(Cols, "FiscalYear",\n        each if Date.Month([Date]) >= 7 then Date.Year([Date]) + 1 else Date.Year([Date]), Int64.Type)\nin\n    Fiscal' },
+      ],
+
       /* AUTOMATED sections — Fabric API + LP collectors. Combine with the
          MANUAL ownership + glossary data to produce the complete document. */
 

@@ -916,6 +916,25 @@ function AccessSection({ access, audience }) {
   );
 }
 
+function PowerQuerySection({ mQueries }) {
+  if (!mQueries || mQueries.length === 0) return null;
+  return (
+    <>
+      <h2 className="doc-h2">Power Query (M)</h2>
+      <p className="doc-p doc-p-sub">The ingestion + transform layer — how each table is loaded and shaped before the DAX model sees it. Extracted from partition definitions.</p>
+      {mQueries.map(q => (
+        <div key={q.table} className="doc-mquery">
+          <div className="doc-mquery-head">
+            <span className="doc-mquery-table mono">{q.table}</span>
+            <span className="doc-mquery-meta">{q.kind} · {q.source}</span>
+          </div>
+          <pre className="doc-mcode mono">{q.m}</pre>
+        </div>
+      ))}
+    </>
+  );
+}
+
 function AdoptionSection({ adoption, lineage, audience }) {
   if (!adoption) return null;
   const top = [...(lineage?.downstream || [])].sort((a, b) => b.viewers - a.viewers).slice(0, 6);
@@ -1572,10 +1591,11 @@ function engineerPages(ctx) {
     <TocList items={[
       { title: '1 · Tables &amp; columns (full)',  page: 3 },
       { title: '2 · ER diagram',                page: 5 },
-      { title: '3 · Measures + DAX',            page: 6 },
-      { title: '4 · Relationships',             page: 8 },
-      { title: '5 · Lineage (upstream + down)', page: 9 },
-      { title: '6 · Change log',                page: 10 },
+      { title: '3 · Power Query (M)',           page: 6 },
+      { title: '4 · Measures + DAX',            page: 7 },
+      { title: '5 · Relationships + calc cols', page: 9 },
+      { title: '6 · Lineage · maturity · refresh · access · adoption', page: 10 },
+      { title: '7 · Change log + technical glossary', page: 15 },
     ]}/>,
 
     <>
@@ -1589,6 +1609,9 @@ function engineerPages(ctx) {
     </>,
 
     <ErDiagram erd={s.erd} rels={s.relationships} />,
+
+    // Power Query (M) — ingestion/transform layer, before DAX
+    <PowerQuerySection mQueries={s.mQueries} />,
 
     <MeasuresList measures={s.measures.slice(0, 4)} withDax />,
 
