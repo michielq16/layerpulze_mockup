@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>LayerPulse — Documents & Glossary · Plain-language review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0D3159; --sky:#2491eb; --gold:#FFBF3C; --orange:#F56E23;
+    --ink:#1f2937; --muted:#64748b; --line:#e5e8ec; --bg:#f4f6f9; --card:#fff;
+    --auto:#16a34a; --manual:#7c3aed;
+    --emerald-bg:#d1fae5; --emerald-fg:#065f46;
+    --violet-bg:#ede9fe; --violet-fg:#5b21b6;
+    --sky-bg:#dbeafe; --sky-fg:#1e40af;
+    --amber-bg:#fef3c7; --amber-fg:#92400e;
+    --rose-bg:#fee2e2; --rose-fg:#991b1b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'DM Sans',system-ui,sans-serif;
+    color:var(--ink); background:var(--bg);
+    line-height:1.6; font-size:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:880px; margin:0 auto; padding:0 22px 80px;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  /* Hero */
+  header.hero{
+    background:linear-gradient(135deg,#0D3159 0%,#13447a 100%);
+    color:#fff; padding:54px 0 46px; margin-bottom:38px;
+  }
+  .hero .wrap{padding-bottom:0;}
+  .hero-mark{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:15px;letter-spacing:.01em;margin-bottom:22px;opacity:.92;}
+  .hero-mark .dot{width:26px;height:26px;border-radius:7px;background:var(--gold);color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;}
+  .hero h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;letter-spacing:-.02em;}
+  .hero p{font-size:18px;margin:0;color:#cfe2f5;max-width:620px;}
+  .hero .meta{margin-top:20px;font-size:13px;color:#9cc2e8;display:flex;gap:18px;flex-wrap:wrap;}
+  .hero .meta b{color:#fff;font-weight:600;}
+
+  /* Section */
+  section{margin-bottom:42px;}
+  .eyebrow{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--sky);margin-bottom:8px;}
+  h2{font-size:25px;font-weight:700;letter-spacing:-.01em;margin:0 0 6px;color:var(--navy);}
+  .lead{font-size:17px;color:var(--muted);margin:0 0 22px;max-width:680px;}
+  p{margin:0 0 14px;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;box-shadow:0 1px 3px rgba(13,49,89,.04);}
+
+  /* Big idea callout */
+  .bigidea{border-left:5px solid var(--gold);}
+  .bigidea p{font-size:17px;margin:0;}
+  .bigidea p+p{margin-top:12px;}
+
+  /* Two buckets */
+  .buckets{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media(max-width:680px){.buckets{grid-template-columns:1fr;}}
+  .bucket h3{margin:0 0 4px;font-size:18px;display:flex;align-items:center;gap:9px;}
+  .bucket .tagdot{width:11px;height:11px;border-radius:50%;flex:none;}
+  .bucket .sub{font-size:13.5px;color:var(--muted);margin:0 0 14px;}
+  .bucket ul{margin:0;padding:0;list-style:none;}
+  .bucket li{padding:7px 0;border-bottom:1px solid var(--line);font-size:14.5px;display:flex;gap:9px;align-items:flex-start;}
+  .bucket li:last-child{border-bottom:0;}
+  .bucket li .ic{color:var(--sky);flex:none;margin-top:2px;}
+  .bucket.auto h3 .tagdot{background:var(--auto);}
+  .bucket.manual h3 .tagdot{background:var(--manual);}
+  .takeaway{margin-top:16px;font-size:14.5px;background:#f8fafc;border:1px dashed var(--line);border-radius:10px;padding:12px 16px;color:var(--ink);}
+  .takeaway b{color:var(--navy);}
+
+  /* Audiences */
+  .readers{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:680px){.readers{grid-template-columns:1fr;}}
+  .reader{border-top:4px solid;border-radius:12px;}
+  .reader .pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 10px;border-radius:5px;margin-bottom:10px;}
+  .reader h3{margin:0 0 4px;font-size:18px;}
+  .reader .who{font-size:13.5px;color:var(--muted);margin:0 0 10px;}
+  .reader p{font-size:14.5px;margin:0;}
+  .reader.auditor{border-color:#e11d48;} .reader.auditor .pill{background:var(--rose-bg);color:var(--rose-fg);}
+  .reader.analyst{border-color:var(--sky);} .reader.analyst .pill{background:var(--sky-bg);color:var(--sky-fg);}
+  .reader.exec{border-color:#d97706;} .reader.exec .pill{background:var(--amber-bg);color:var(--amber-fg);}
+  .reader.eng{border-color:#7c3aed;} .reader.eng .pill{background:var(--violet-bg);color:var(--violet-fg);}
+
+  /* Section list */
+  .group{margin-bottom:18px;}
+  .group-h{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--navy);margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid var(--line);}
+  .rows{display:flex;flex-direction:column;gap:2px;}
+  .row{display:flex;align-items:center;gap:11px;padding:7px 4px;font-size:14.5px;}
+  .row .name{flex:1;}
+  .tag{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:4px;flex:none;}
+  .tag.auto{background:#dcfce7;color:#15803d;}
+  .tag.manual{background:#f3e8ff;color:#6d28d9;}
+  .tag.soon{background:#f1f5f9;color:#64748b;}
+
+  /* Screens */
+  .screens{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media(max-width:680px){.screens{grid-template-columns:1fr;}}
+  .screen h3{margin:0 0 6px;font-size:19px;color:var(--navy);}
+  .screen p{font-size:14.5px;margin:0 0 14px;}
+  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--sky);color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:9px 16px;border-radius:9px;transition:background .15s;}
+  .btn:hover{background:#1577c9;}
+  .btn.ghost{background:#fff;color:var(--sky);border:1.5px solid var(--sky);}
+  .btn.ghost:hover{background:var(--sky-bg);}
+
+  /* Decisions */
+  .decisions{list-style:none;margin:0;padding:0;}
+  .decisions li{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:15px 18px;margin-bottom:11px;display:flex;gap:13px;align-items:flex-start;}
+  .decisions .q-num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:1px;}
+  .decisions .q-body b{display:block;font-size:15px;color:var(--navy);margin-bottom:2px;}
+  .decisions .q-body span{font-size:14px;color:var(--muted);}
+
+  footer{border-top:1px solid var(--line);padding-top:24px;margin-top:10px;font-size:14px;color:var(--muted);}
+  footer a{color:var(--sky);text-decoration:none;font-weight:600;}
+  footer .links{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;}
+  .note{font-size:13px;color:var(--muted);font-style:italic;}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="hero-mark"><span class="dot">LP</span> LayerPulse</div>
+    <h1>The auto-generated model document — in plain language</h1>
+    <p>A walkthrough of what we've designed for <b>Documents</b> and the <b>Business Glossary</b>. No jargon, no markdown. Read top-to-bottom in about 5 minutes.</p>
+    <div class="meta">
+      <span>📄 <b>For:</b> Product owner review</span>
+      <span>⏱ <b>Read:</b> ~5 min</span>
+      <span>🔗 <b>Live mockup linked throughout</b></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- BIG IDEA -->
+  <section>
+    <div class="eyebrow">The one-sentence version</div>
+    <h2>What we're building</h2>
+    <div class="card bigidea">
+      <p>Documenting a Power BI model by hand takes hours — and it's out of date the moment the model changes.</p>
+      <p>LayerPulse generates the whole document in seconds. We already collect everything <b>technical</b> from Fabric automatically. Your team adds the <b>business</b> knowledge once. We combine both into a single, audience-ready Word document.</p>
+    </div>
+  </section>
+
+  <!-- TWO BUCKETS -->
+  <section>
+    <div class="eyebrow">How it works</div>
+    <h2>Two kinds of knowledge, combined</h2>
+    <p class="lead">Every document is built from two sources. One we gather for you. One your team owns.</p>
+    <div class="buckets">
+      <div class="card bucket auto">
+        <h3><span class="tagdot"></span>Automatic — we collect it</h3>
+        <p class="sub">Pulled straight from Microsoft Fabric. Zero effort from your team.</p>
+        <ul>
+          <li><span class="ic">›</span>Tables, columns, relationships, data types</li>
+          <li><span class="ic">›</span>Measures (DAX) + how data is loaded (Power Query / M)</li>
+          <li><span class="ic">›</span>Where data comes from and where it goes (lineage)</li>
+          <li><span class="ic">›</span>Security: row-level + column-level + who can access</li>
+          <li><span class="ic">›</span>Model health score &amp; refresh history</li>
+          <li><span class="ic">›</span>Usage: how many people read the downstream reports</li>
+          <li><span class="ic">›</span>Cost: what this model costs to run</li>
+        </ul>
+      </div>
+      <div class="card bucket manual">
+        <h3><span class="tagdot"></span>Manual — your team adds it</h3>
+        <p class="sub">The business meaning Fabric can't know. Captured once in LayerPulse, reused everywhere.</p>
+        <ul>
+          <li><span class="ic">›</span>Who owns the model (Owner, expert, stewards)</li>
+          <li><span class="ic">›</span>What each metric/KPI <i>means</i> (business glossary)</li>
+          <li><span class="ic">›</span>Which business processes the model supports</li>
+          <li><span class="ic">›</span>A short note from the owner</li>
+          <li><span class="ic">›</span>Sign-off &amp; "certified" stamp for trust</li>
+        </ul>
+      </div>
+    </div>
+    <div class="takeaway">
+      <b>The simple rule:</b> the automatic half makes the document <b>complete</b>. The manual half makes it <b>trustworthy</b>. If a measure has no business definition, we leave it blank on purpose — that empty space is the nudge to add one.
+    </div>
+  </section>
+
+  <!-- AUDIENCES -->
+  <section>
+    <div class="eyebrow">One document, four readers</div>
+    <h2>The same model, written for who's reading</h2>
+    <p class="lead">You generate once. LayerPulse shapes it for the reader — different sections, different depth, different tone.</p>
+    <div class="readers">
+      <div class="card reader auditor">
+        <span class="pill">Auditor</span>
+        <h3>Proof for compliance</h3>
+        <p class="who">For SOC 2 / audit evidence</p>
+        <p>Security rules, who can access what, refresh reliability, findings, and a real sign-off block with the owner + stewards.</p>
+      </div>
+      <div class="card reader analyst">
+        <span class="pill">Analyst</span>
+        <h3>Onboarding handoff</h3>
+        <p class="who">For someone new to the model</p>
+        <p>Plain-English measures, the full glossary, who to ask, and how fresh the data is — everything to get productive fast.</p>
+      </div>
+      <div class="card reader exec">
+        <span class="pill">Executive</span>
+        <h3>The one-page summary</h3>
+        <p class="who">For the QBR / leadership</p>
+        <p>Big KPIs with definitions, reach (how many people use it), cost to run, and the owner's note. No technical detail.</p>
+      </div>
+      <div class="card reader eng">
+        <span class="pill">Engineer</span>
+        <h3>The full technical manual</h3>
+        <p class="who">For whoever maintains it</p>
+        <p>Everything — schema, DAX, Power Query, storage, hierarchies, security, dormant measures, lineage. The complete picture.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT'S IN IT -->
+  <section>
+    <div class="eyebrow">The full menu</div>
+    <h2>What can go in the document</h2>
+    <p class="lead">Every section, grouped the way the document flows. <span class="tag auto">auto</span> = we collect it · <span class="tag manual">your team</span> = manual · <span class="tag soon">soon</span> = designed, not built yet.</p>
+
+    <div class="group">
+      <div class="group-h">Front matter</div>
+      <div class="rows">
+        <div class="row"><span class="name">Cover (model name, owner, domain, certified badge)</span><span class="tag auto">auto</span><span class="tag manual">your team</span></div>
+        <div class="row"><span class="name">Executive summary</span><span class="tag auto">auto</span></div>
+        <div class="row"><span class="name">Owner's note</span><span class="tag manual">your team</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-h">Trust &amp; health</div>
+      <div class="rows">
+        <div class="row"><span class="name">Model maturity / quality score</span><span class="tag auto">auto</span></div>
+        <div class="row"><span class="name">Refresh history (+ incremental policy)</span><span class="tag auto">auto</span></div>
+        <div class="row"><span class="name">Governance findings</span><span class="tag auto">auto</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-h">Structure</div>
+      <div class="rows">
+        <div class="row"><span class="name">Tables &amp; columns (descriptions from glossary)</span><span class="tag auto">auto</span><span class="tag manual">your team</span></div>
+        <div class="row"><span class="name">Relationships &amp; ER diagram</span><span class="tag auto">auto</span></div>
+        <div class="row"><span class="name">Hierarchies</span><span class="tag auto">auto</span></div>
+        <div class="row"><span class="name">Calculation groups, perspectives, translations</span><span class="tag auto">auto</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-h">Logic</div>
+      <div class="rows">
+        <div class="row"><span class="name">Power Query (M) — how data is loaded</span><span class="tag auto">auto</span></div>
+        <div class="row"><span class="name">Measures &amp; DAX (meaning from glossary)</span><span class="tag auto">auto</span><span class="tag manual">your team</span></div>
+        <div class="row"><span class="name">Calculated columns &amp; storage size</span><span class="tag auto">auto</span></div>
+        <div class="row"><span class="name">Measure usage — which are used vs dormant</span><span class="tag auto">auto</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-h">Security &amp; access</div>
+      <div class="rows">
+        <div class="row"><span class="name">Row-level security (RLS)</span><span class="tag auto">auto</span></div>
+        <div class="row"><span class="name">Object-level security (OLS) &amp; sensitivity labels</span><span class="tag auto">auto</span></div>
+        <div class="row"><span class="name">Access — who can read, mapped to RLS</span><span class="tag auto">auto</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-h">Usage &amp; cost</div>
+      <div class="rows">
+        <div class="row"><span class="name">Lineage (sources &amp; downstream reports)</span><span class="tag auto">auto</span></div>
+        <div class="row"><span class="name">Adoption — how many people use it</span><span class="tag auto">auto</span></div>
+        <div class="row"><span class="name">Capacity &amp; cost to run</span><span class="tag auto">auto</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-h">Business context</div>
+      <div class="rows">
+        <div class="row"><span class="name">Business glossary (the definitions)</span><span class="tag manual">your team</span></div>
+        <div class="row"><span class="name">Processes the model supports</span><span class="tag manual">your team</span></div>
+        <div class="row"><span class="name">Owners &amp; stewards</span><span class="tag manual">your team</span></div>
+        <div class="row"><span class="name">Change log</span><span class="tag auto">auto</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-h">Back matter</div>
+      <div class="rows">
+        <div class="row"><span class="name">Sign-off block (signatures)</span><span class="tag manual">your team</span></div>
+        <div class="row"><span class="name">Certification stamp</span><span class="tag manual">your team</span></div>
+        <div class="row"><span class="name">Change-log "why" notes</span><span class="tag soon">soon</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCREENS -->
+  <section>
+    <div class="eyebrow">See it for real</div>
+    <h2>The two screens behind this</h2>
+    <div class="screens">
+      <div class="card screen">
+        <h3>📄 Documents</h3>
+        <p>Browse every doc you've generated, or make a new one. Click any model to see the live Word-style preview and flip between the four readers.</p>
+        <a class="btn" href="https://layerpulze-mockup.vercel.app/documents" target="_blank" rel="noreferrer">Open Documents →</a>
+      </div>
+      <div class="card screen">
+        <h3>📖 Business Glossary</h3>
+        <p>Your team's dictionary — every metric, KPI, and term, with an owner and a definition. Attach terms to models so the meaning flows into every document.</p>
+        <a class="btn ghost" href="https://layerpulze-mockup.vercel.app/glossary" target="_blank" rel="noreferrer">Open Glossary →</a>
+      </div>
+    </div>
+    <p class="note" style="margin-top:14px;">Tip: open a model (e.g. Sales Analytics) → <b>Documentation</b> tab → click the <b>Engineer</b> version to see the fullest document.</p>
+  </section>
+
+  <!-- DECISIONS -->
+  <section>
+    <div class="eyebrow">Over to you</div>
+    <h2>A few decisions we need from you</h2>
+    <p class="lead">Nothing urgent — these shape the build. Plain choices, no homework.</p>
+    <ul class="decisions">
+      <li><span class="q-num">1</span><span class="q-body"><b>Whose logo on the cover?</b><span>For audit docs about a customer — your partner logo, or the customer's? (Likely the customer's. May need a legal check.)</span></span></li>
+      <li><span class="q-num">2</span><span class="q-body"><b>How long do we keep generated documents?</b><span>Auditors often need 7 years; storage grows fast. 90 days / 1 year / forever?</span></span></li>
+      <li><span class="q-num">3</span><span class="q-body"><b>Is the Business Glossary its own thing, or part of Documents?</b><span>It powers the document definitions, so it's a dependency either way — but it could be a standalone governance screen.</span></span></li>
+      <li><span class="q-num">4</span><span class="q-body"><b>"Ownership" means two things.</b><span>Fabric already tracks <i>access</i> ownership (permissions). What we added is <i>business</i> ownership (who's accountable). Keep them as separate concepts? (We think yes.)</span></span></li>
+    </ul>
+  </section>
+
+  <footer>
+    <div>This page summarizes the design work for Documents + Glossary. The detailed specs live in the repo for the build team.</div>
+    <div class="links">
+      <a href="https://layerpulze-mockup.vercel.app/documents" target="_blank" rel="noreferrer">Live: Documents</a>
+      <a href="https://layerpulze-mockup.vercel.app/glossary" target="_blank" rel="noreferrer">Live: Glossary</a>
+      <a href="https://layerpulze-mockup.vercel.app/ownership" target="_blank" rel="noreferrer">Live: Ownership</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
