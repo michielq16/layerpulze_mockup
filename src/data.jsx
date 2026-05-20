@@ -459,6 +459,79 @@ const DATA = {
           { name: 'DimGeography', x:  60, y: 340, kind: 'dim'  },
         ],
       },
+
+      /* Power Query (M) — the ingestion/transform layer. Extracted from the
+         model's partition definitions via Scanner getDefinition / TMDL.
+         DAX is the analytics layer; M is how each table is loaded + shaped. */
+      mQueries: [
+        { table: 'FactSales', source: 'Lakehouse · sales_curated.fact_sales_gold', kind: 'Import',
+          m: 'let\n    Source = Lakehouse.Contents(null){[workspaceId = "f64-prod-we"]}[Data],\n    curated = Source{[Id = "sales_curated", ItemKind = "Lakehouse"]}[Data],\n    fact = curated{[Id = "fact_sales_gold", ItemKind = "Table"]}[Data],\n    KeepProd = Table.SelectRows(fact, each [OrderDate] >= #date(2022, 1, 1)),\n    DropInternal = Table.RemoveColumns(KeepProd, {"_hash", "etl_batch_id", "_loaded_at"}),\n    NetAmount = Table.AddColumn(DropInternal, "NetAmountLCY",\n        each [Quantity] * [UnitPrice] * (1 - [DiscountPct]), type number),\n    Typed = Table.TransformColumnTypes(NetAmount, {\n        {"SalesKey", Int64.Type}, {"DateKey", Int64.Type},\n        {"NetAmountLCY", type number}, {"CostLCY", type number}\n    })\nin\n    Typed' },
+        { table: 'DimCustomer', source: 'Dataflow Gen2 · crm.customers', kind: 'Import',
+          m: 'let\n    Source = PowerPlatform.Dataflows(null),\n    ws = Source{[workspaceId = "f64-prod-we"]}[Data],\n    crm = ws{[dataflowId = "crm-sync"]}[Data],\n    customers = crm{[entity = "customers"]}[Data],\n    Segment = Table.AddColumn(customers, "Segment",\n        each if [ARR] >= 10000000 then "Enterprise"\n             else if [ARR] >= 1000000 then "Mid-Market"\n             else "SMB", type text),\n    Renamed = Table.RenameColumns(Segment, {{"cust_id", "CustomerID"}, {"cust_name", "CustomerName"}})\nin\n    Renamed' },
+        { table: 'DimDate', source: 'Static seed · date.dim_date', kind: 'Import',
+          m: 'let\n    Start = #date(1990, 1, 1),\n    End = #date(2030, 12, 31),\n    Days = Duration.Days(End - Start) + 1,\n    Dates = List.Dates(Start, Days, #duration(1, 0, 0, 0)),\n    Tbl = Table.FromList(Dates, Splitter.SplitByNothing(), {"Date"}),\n    Cols = Table.AddColumn(Tbl, "DateKey",\n        each Date.Year([Date]) * 10000 + Date.Month([Date]) * 100 + Date.Day([Date]), Int64.Type),\n    Fiscal = Table.AddColumn(Cols, "FiscalYear",\n        each if Date.Month([Date]) >= 7 then Date.Year([Date]) + 1 else Date.Year([Date]), Int64.Type)\nin\n    Fiscal' },
+      ],
+
+      /* AUTOMATED sections — Fabric API + LP collectors. Combine with the
+         MANUAL ownership + glossary data to produce the complete document. */
+
+      // Model maturity / quality score (LP rules engine — same shape as /models overview)
+      quality: {
+        score: 9.2, tier: 'Platinum', trend: 0.2,
+        breakdown: [
+          { dim: 'Naming',         val: 9.5 },
+          { dim: 'Sources',        val: 8.9 },
+          { dim: 'Performance',    val: 8.1 },
+          { dim: 'Structure',      val: 9.8 },
+          { dim: 'Hygiene',        val: 7.0 },
+          { dim: 'Discoverability',val: 5.5 },
+        ],
+        weakest: 'Discoverability',
+        note: 'Discoverability is the weakest dimension — 14 of 156 columns lack descriptions and 18 measures have no business-glossary term attached.',
+      },
+
+      // Refresh history (Refreshables endpoint + activity_events). Stale refreshes
+      // = stale data = "not trustworthy" — surfaced for analyst + auditor + engineer.
+      refresh: {
+        schedule: 'Daily · 04:00 UTC',
+        lastRefresh: '2026-05-20 04:02 UTC',
+        lastStatus: 'success',
+        avgDurationMin: 7.4,
+        windows: [
+          { window: 'Last 24h', runs: 1,  ok: 1,  failed: 0 },
+          { window: 'Last 7d',  runs: 7,  ok: 6,  failed: 1 },
+          { window: 'Last 30d', runs: 30, ok: 27, failed: 3 },
+          { window: 'Last 90d', runs: 90, ok: 84, failed: 6 },
+        ],
+        recentFailures: [
+          { date: '2026-05-14 04:01 UTC', reason: 'Gateway timeout — source crm.customers unreachable for 15 min' },
+          { date: '2026-05-08 04:00 UTC', reason: 'DAX error in [Net Revenue Retention %] — circular dependency (since fixed)' },
+          { date: '2026-04-29 04:03 UTC', reason: 'Capacity throttled — F64 at 100% CU during the refresh window' },
+        ],
+      },
+
+      // Access (Admin API permissions + AAD Graph group expansion). Engineer
+      // uses this to verify RLS scoping; auditor uses it as a who-can-read control.
+      access: [
+        { principal: 'Alex Rivera',         kind: 'User',  role: 'Admin', members: null, source: 'Workspace Admin',   rls: 'Bypass (admin sees all)' },
+        { principal: 'sg-fin-data',         kind: 'Group', role: 'Build', members: 18,   source: 'Workspace Member',  rls: 'Bypass (build role)' },
+        { principal: 'sg-bi-stewards',      kind: 'Group', role: 'Build', members: 6,    source: 'Workspace Member',  rls: 'Bypass (build role)' },
+        { principal: 'sg-sales-na',         kind: 'Group', role: 'Read',  members: 42,   source: 'App audience',      rls: 'Region · NA' },
+        { principal: 'sg-sales-emea',       kind: 'Group', role: 'Read',  members: 28,   source: 'App audience',      rls: 'Region · EMEA' },
+        { principal: 'sg-sales-apac',       kind: 'Group', role: 'Read',  members: 19,   source: 'App audience',      rls: 'Region · APAC' },
+        { principal: 'sg-exec',             kind: 'Group', role: 'Read',  members: 12,   source: 'App audience',      rls: 'No filter (sees all regions)' },
+        { principal: 'sg-smb-team',         kind: 'Group', role: 'Read',  members: 9,    source: 'Direct grant',      rls: 'SMB segment only' },
+      ],
+
+      // Adoption (activity_events on downstream reports). Reach + dormancy.
+      adoption: {
+        dau: 42, wau: 168, mau: 284,
+        totalViewers30d: 312,
+        totalOpens30d: 9840,
+        dormantReports: 2,
+        newReaders30d: 47,
+        trend30: [88,92,104,96,118,142,138,101,87,95,112,128,134,122,108,98,132,148,156,144,128,112,94,106,124,138,152,146,134,118],
+      },
     },
   },
 
@@ -1524,7 +1597,7 @@ const DATA = {
         ownerEmail: 'a.rivera@contoso.com', smeEmail: 't.hermanek@contoso.com',
         source: 'Finance policy CO-04 (currency handling)',
         processUrl: 'https://wiki.contoso.com/finance/currency-policy',
-        linkedTo: { models: ['Sales Analytics', 'Revenue Forecast', 'Expense P&L'], measures: ['[Total Revenue (LCY)]', '[Revenue YTD (LCY)]', '[AOV (LCY)]'] },
+        linkedTo: { models: ['Sales Analytics', 'Revenue Forecast', 'Expense P&L'], measures: ['[Total Revenue (LCY)]', '[Revenue YTD (LCY)]', '[AOV (LCY)]'], columns: ['FactSales[NetAmountLCY]', 'FactSales[CostLCY]', 'FactSales[UnitPrice]'], tables: [] },
         lastReviewed: '2026-04-30', nextReview: '2026-07-30',
       },
       { id: 'g-aov', term: 'AOV', type: 'metric', domain: 'sales', status: 'approved', sensitivity: 'internal',
@@ -1534,7 +1607,7 @@ const DATA = {
         ownerEmail: 'p.nair@contoso.com', smeEmail: 'a.rivera@contoso.com',
         source: 'Sales Analytics measure folder · Customers',
         processUrl: 'https://wiki.contoso.com/sales/aov-definition',
-        linkedTo: { models: ['Sales Analytics'], measures: ['[AOV (LCY)]'] },
+        linkedTo: { models: ['Sales Analytics'], measures: ['[AOV (LCY)]', 'Avg Order Value'] },
         lastReviewed: '2026-04-22', nextReview: '2026-07-22',
       },
       { id: 'g-nrr', term: 'NRR', type: 'kpi', domain: 'sales', status: 'approved', sensitivity: 'confidential',
@@ -1554,7 +1627,7 @@ const DATA = {
         ownerEmail: 'a.rivera@contoso.com', smeEmail: 'm.qureshi@contoso.com',
         source: 'Finance policy CO-01',
         processUrl: 'https://wiki.contoso.com/finance/fiscal-calendar',
-        linkedTo: { models: ['Sales Analytics', 'Budget Planning', 'Revenue Forecast'], measures: [] },
+        linkedTo: { models: ['Sales Analytics', 'Budget Planning', 'Revenue Forecast'], measures: [], columns: ['DimDate[FiscalYear]', 'DimDate[CalQuarter]'], tables: ['DimDate'] },
         lastReviewed: '2026-03-15', nextReview: '2026-06-15',
       },
       { id: 'g-seg', term: 'Customer segment', type: 'dimension', domain: 'sales', status: 'approved', sensitivity: 'internal',
@@ -1564,7 +1637,7 @@ const DATA = {
         ownerEmail: 'p.nair@contoso.com', smeEmail: 'p.nair@contoso.com',
         source: 'Sales playbook · segment policy',
         processUrl: 'https://wiki.contoso.com/sales/segment-policy',
-        linkedTo: { models: ['Sales Analytics'], measures: ['[Top 10 Customers Share %]'] },
+        linkedTo: { models: ['Sales Analytics'], measures: ['[Top 10 Customers Share %]'], columns: ['DimCustomer[Segment]', 'DimCustomer[TierCode]'], tables: ['DimCustomer'] },
         lastReviewed: '2026-05-08', nextReview: '2026-08-08',
       },
       { id: 'g-gm',  term: 'Gross margin', type: 'metric', domain: 'finance', status: 'approved', sensitivity: 'confidential',
@@ -1574,7 +1647,7 @@ const DATA = {
         ownerEmail: 'a.rivera@contoso.com', smeEmail: 'm.qureshi@contoso.com',
         source: 'Finance policy CO-08',
         processUrl: 'https://wiki.contoso.com/finance/gross-margin',
-        linkedTo: { models: ['Sales Analytics', 'Expense P&L'], measures: ['[Gross Margin %]'] },
+        linkedTo: { models: ['Sales Analytics', 'Expense P&L'], measures: ['[Gross Margin %]', 'Gross Margin'] },
         lastReviewed: '2026-05-12', nextReview: '2026-08-12',
       },
       { id: 'g-mcd', term: 'Management of Change', type: 'process', domain: 'compliance', status: 'approved', sensitivity: 'internal',
@@ -1584,7 +1657,7 @@ const DATA = {
         ownerEmail: 's.lindqvist@contoso.com', smeEmail: 't.hermanek@contoso.com',
         source: 'Compliance runbook 2026-Q1',
         processUrl: 'https://wiki.contoso.com/compliance/moc-process',
-        linkedTo: { models: ['Management of Change'], measures: [] },
+        linkedTo: { models: ['Management of Change', 'Sales Analytics', 'Budget Planning', 'GL Balances'], measures: [], columns: [], tables: [] },
         lastReviewed: '2026-04-10', nextReview: '2026-07-10',
       },
       { id: 'g-rls', term: 'RLS', type: 'acronym', domain: 'compliance', status: 'approved', sensitivity: 'internal',
@@ -1594,7 +1667,7 @@ const DATA = {
         ownerEmail: 's.lindqvist@contoso.com', smeEmail: 'm.qureshi@contoso.com',
         source: 'Security policy SEC-12',
         processUrl: 'https://wiki.contoso.com/security/rls-policy',
-        linkedTo: { models: ['Sales Analytics', 'HR Headcount', 'Operations Scorecard'], measures: [] },
+        linkedTo: { models: ['Sales Analytics', 'HR Headcount', 'Operations Scorecard'], measures: [], columns: ['FactSales[GeographyKey]', 'DimCustomer[Segment]'], tables: ['DimGeography', 'DimCustomer'] },
         lastReviewed: '2026-03-22', nextReview: '2026-06-22',
       },
       { id: 'g-cu',  term: 'CU', type: 'acronym', domain: 'ops', status: 'approved', sensitivity: 'public',
@@ -1766,7 +1839,7 @@ const DATA = {
         synonyms: ['Compliance sweep'], related: ['Tenant settings', 'RLS', 'SOC 2'],
         ownerEmail: 's.lindqvist@contoso.com', smeEmail: 't.hermanek@contoso.com',
         source: 'Compliance runbook 2026', processUrl: 'https://wiki.contoso.com/compliance/quarterly-review',
-        linkedTo: { models: [], measures: [] }, lastReviewed: '2026-04-15', nextReview: '2026-07-15' },
+        linkedTo: { models: ['Sales Analytics', 'HR Headcount', 'Operations Scorecard', 'Budget Planning', 'GL Balances'], measures: [], columns: [], tables: [] }, lastReviewed: '2026-04-15', nextReview: '2026-07-15' },
 
       // H
       { id: 'g-hwm', term: 'HWM', type: 'acronym', domain: 'ops', status: 'proposed', sensitivity: 'internal',
@@ -2000,13 +2073,13 @@ const DATA = {
         synonyms: [], related: ['YoY', 'Fiscal Year', 'MoM'],
         ownerEmail: 'a.rivera@contoso.com', smeEmail: 'm.qureshi@contoso.com',
         source: 'DAX time-intelligence reference', processUrl: 'https://learn.microsoft.com/dax/datesytd-function-dax',
-        linkedTo: { models: ['Sales Analytics'], measures: ['[Revenue YTD (LCY)]'] }, lastReviewed: '2026-04-30', nextReview: '2026-07-30' },
+        linkedTo: { models: ['Sales Analytics'], measures: ['[Revenue YTD (LCY)]', 'YTD Revenue', 'MTD Revenue'] }, lastReviewed: '2026-04-30', nextReview: '2026-07-30' },
       { id: 'g-yoy', term: 'YoY', type: 'metric', domain: 'finance', status: 'approved', sensitivity: 'internal',
         definition: 'Year-over-Year growth. Current period divided by the same period one year ago. The standard "is the business growing" metric.',
         synonyms: ['Year-on-year'], related: ['YTD', 'QoQ', 'MoM'],
         ownerEmail: 'a.rivera@contoso.com', smeEmail: 'm.qureshi@contoso.com',
         source: 'Finance reporting standards', processUrl: 'https://wiki.contoso.com/finance/period-comparison',
-        linkedTo: { models: ['Sales Analytics'], measures: ['[Total Revenue YoY %]'] }, lastReviewed: '2026-04-30', nextReview: '2026-07-30' },
+        linkedTo: { models: ['Sales Analytics'], measures: ['[Total Revenue YoY %]', 'Sales Growth %'] }, lastReviewed: '2026-04-30', nextReview: '2026-07-30' },
 
       // Z
       { id: 'g-zt',  term: 'Zero-trust', type: 'business', domain: 'compliance', status: 'approved', sensitivity: 'internal',

@@ -1,8 +1,23 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import Icon from './Icon';
 import DATA from './data';
 import { StatCard } from './components';
 import { resolveModelOwner, resolveModelSme, resolveModelStewards, resolveModelDomain } from './Ownership';
+import { getModelGlossaryAttachments, getColumnGlossaryAttachments } from './Glossary';
+
+/* Resolve a glossary-sourced description for a table or column ref.
+   Operator rule: descriptions come from the attached business-glossary
+   term — never invented prose. Returns null when nothing is attached. */
+function glossaryDescFor({ table, column }) {
+  let matches = [];
+  if (column) matches = getColumnGlossaryAttachments(column);
+  else if (table) matches = DATA.glossary.items.filter(t => (t.linkedTo?.tables || []).includes(table));
+  if (matches.length === 0) return null;
+  const t = matches[0];
+  const typeMeta = DATA.glossary.types.find(x => x.key === t.type);
+  return { term: t.term, type: typeMeta?.label || t.type, tone: typeMeta?.tone || 'slate', def: (t.definition || '').split('. ')[0] + '.' };
+}
 
 export function Documents() {
   const d = DATA.documents;
@@ -556,7 +571,26 @@ export function DocumentPreviewModal({ model, ws, env = 'PROD', audience: initia
   const stewards  = modelId ? resolveModelStewards(modelId) : [];
   const domain    = modelId ? resolveModelDomain(modelId)   : null;
 
-  const ctx = { model, ws, env, includeLogo, generatedAt, sample, audience, owner, sme, stewards, domain };
+  // Pull glossary terms attached to this model (manual attachments via /glossary
+   // or the model-detail "Attach term" affordance). Transformed into the
+   // {term, def, type} shape the page builders expect. Falls back to the
+   // sample fixture only when no attachments are recorded for this model.
+  const attachedGlossary = React.useMemo(() => {
+    const raw = getModelGlossaryAttachments(model);
+    if (raw.length === 0) {
+      // Fallback — use canonical fixture so the doc never has an empty glossary
+      return sample.glossary.map(t => ({ term: t.term, def: t.def, type: 'business' }));
+    }
+    return raw.map(t => ({
+      term: t.term,
+      def: (t.definition || '').split('. ')[0] + '.',
+      type: t.type,
+      domain: t.domain,
+      sensitivity: t.sensitivity,
+    }));
+  }, [model]);
+
+  const ctx = { model, ws, env, includeLogo, generatedAt, sample, audience, owner, sme, stewards, domain, attachedGlossary };
   const pages = React.useMemo(() => buildDocPages(audience, ctx), [audience, model, ws, env, includeLogo, generatedAt]);
   const total = pages.length;
 
@@ -584,7 +618,10 @@ export function DocumentPreviewModal({ model, ws, env = 'PROD', audience: initia
 
   const audMeta = AUDIENCE_LABELS[audience] || { label: audience, tone: 'slate' };
 
-  return (
+  // Portal to <body> so the modal escapes any transformed ancestor (e.g. the
+  // `.fade-in` tab wrapper) that would otherwise become its containing block
+  // and trap position:fixed inside the page content instead of the viewport.
+  return createPortal(
     <div className="doc-modal-backdrop" onClick={onClose}>
       <div className="doc-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`Generated document — ${model}`}>
 
@@ -684,7 +721,8 @@ export function DocumentPreviewModal({ model, ws, env = 'PROD', audience: initia
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -774,6 +812,172 @@ function TocList({ items }) {
   );
 }
 
+/* ── AUTOMATED sections (Fabric API + LP collectors) ─────────────────── */
+
+function QualityScoreSection({ quality }) {
+  if (!quality) return null;
+  const barColor = (v) => v >= 8 ? '#16a34a' : v >= 6.5 ? '#ca8a04' : '#dc2626';
+  return (
+    <>
+      <h2 className="doc-h2">Model maturity</h2>
+      <p className="doc-p doc-p-sub">LayerPulse quality score · {quality.tier} tier · trending {quality.trend >= 0 ? '▲' : '▼'} {Math.abs(quality.trend).toFixed(1)} this quarter.</p>
+      <div className="doc-quality">
+        <div className="doc-quality-score">
+          <div className="doc-quality-num mono" style={{ color: barColor(quality.score) }}>{quality.score.toFixed(1)}</div>
+          <div className="doc-quality-out">/ 10</div>
+        </div>
+        <div className="doc-quality-bars">
+          {quality.breakdown.map(b => (
+            <div key={b.dim} className="doc-quality-row">
+              <span className="doc-quality-dim">{b.dim}</span>
+              <span className="doc-quality-track"><span className="doc-quality-fill" style={{ width: (b.val * 10) + '%', background: barColor(b.val) }}/></span>
+              <span className="mono doc-quality-val">{b.val.toFixed(1)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {quality.note && <p className="doc-p" style={{ marginTop: 10, fontSize: '10pt' }}><b>Weakest — {quality.weakest}.</b> {quality.note}</p>}
+    </>
+  );
+}
+
+function RefreshHistorySection({ refresh, audience }) {
+  if (!refresh) return null;
+  const wk = refresh.windows.find(w => w.window === 'Last 7d');
+  const stale = wk && wk.failed > 0;
+  const note = audience === 'analyst'
+    ? 'Missed refreshes mean stale data — a model that fails to refresh is not trustworthy for analysis.'
+    : audience === 'engineer'
+      ? 'Recent failures + reasons below — first place to look when numbers go stale.'
+      : 'Refresh reliability is part of the evidence pack — proves the data is current.';
+  return (
+    <>
+      <h2 className="doc-h2">Refresh history</h2>
+      <p className="doc-p doc-p-sub">Scheduled {refresh.schedule} · last refresh {refresh.lastRefresh} ({refresh.lastStatus}) · avg {refresh.avgDurationMin} min. {note}</p>
+      <table className="doc-table">
+        <thead><tr><th>Window</th><th>Runs</th><th>OK</th><th>Failed</th><th>Success rate</th></tr></thead>
+        <tbody>
+          {refresh.windows.map((w, i) => {
+            const rate = Math.round((w.ok / w.runs) * 100);
+            return (
+              <tr key={i}>
+                <td><b>{w.window}</b></td>
+                <td className="mono doc-td-num">{w.runs}</td>
+                <td className="mono doc-td-num">{w.ok}</td>
+                <td className="mono doc-td-num">{w.failed > 0 ? <span style={{ color: '#b91c1c', fontWeight: 700 }}>{w.failed}</span> : '0'}</td>
+                <td className="mono doc-td-num"><span style={{ color: rate >= 95 ? '#166534' : rate >= 85 ? '#92400e' : '#b91c1c', fontWeight: 700 }}>{rate}%</span></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {refresh.recentFailures?.length > 0 && (
+        <>
+          <h3 className="doc-h3">Recent failures</h3>
+          {refresh.recentFailures.map((f, i) => (
+            <div key={i} className="doc-finding doc-finding-warning" style={{ marginBottom: 8 }}>
+              <div className="doc-finding-head">
+                <span className="doc-finding-sev doc-finding-sev-warning">failed</span>
+                <span className="doc-finding-title mono" style={{ fontSize: '10pt' }}>{f.date}</span>
+              </div>
+              <div className="doc-finding-body" style={{ marginTop: 4 }}>{f.reason}</div>
+            </div>
+          ))}
+        </>
+      )}
+    </>
+  );
+}
+
+function AccessSection({ access, audience }) {
+  if (!access || access.length === 0) return null;
+  const note = audience === 'engineer'
+    ? 'Use this to verify RLS scoping — each Read group should map to the intended RLS rule. A group with "No filter" sees all rows.'
+    : 'Who can access this model and at what level. Read groups are scoped by the RLS rule shown.';
+  return (
+    <>
+      <h2 className="doc-h2">Access</h2>
+      <p className="doc-p doc-p-sub">{access.length} principals · {access.filter(a => a.role === 'Read').length} read-scoped groups. {note}</p>
+      <table className="doc-table">
+        <thead><tr><th>Principal</th><th>Type</th><th>Role</th><th>Members</th><th>RLS scope</th></tr></thead>
+        <tbody>
+          {access.map((a, i) => (
+            <tr key={i}>
+              <td className="mono"><b>{a.principal}</b></td>
+              <td>{a.kind}</td>
+              <td><span className={'doc-access-role doc-access-role-' + a.role.toLowerCase()}>{a.role}</span></td>
+              <td className="mono doc-td-num">{a.members ?? '—'}</td>
+              <td className="doc-td-desc">{a.rls}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
+function PowerQuerySection({ mQueries }) {
+  if (!mQueries || mQueries.length === 0) return null;
+  return (
+    <>
+      <h2 className="doc-h2">Power Query (M)</h2>
+      <p className="doc-p doc-p-sub">The ingestion + transform layer — how each table is loaded and shaped before the DAX model sees it. Extracted from partition definitions.</p>
+      {mQueries.map(q => (
+        <div key={q.table} className="doc-mquery">
+          <div className="doc-mquery-head">
+            <span className="doc-mquery-table mono">{q.table}</span>
+            <span className="doc-mquery-meta">{q.kind} · {q.source}</span>
+          </div>
+          <pre className="doc-mcode mono">{q.m}</pre>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function AdoptionSection({ adoption, lineage, audience }) {
+  if (!adoption) return null;
+  const top = [...(lineage?.downstream || [])].sort((a, b) => b.viewers - a.viewers).slice(0, 6);
+  const note = audience === 'executive'
+    ? 'Reach across the organization — this model is the load-bearing source for the surfaces below.'
+    : audience === 'engineer'
+      ? 'Consumer load — these are the reports that break if this model breaks.'
+      : 'Where this model is used — open the top surfaces to see it in action.';
+  return (
+    <>
+      <h2 className="doc-h2">Adoption</h2>
+      <p className="doc-p doc-p-sub">{note}</p>
+      <div className="doc-kpi-grid">
+        <div className="doc-kpi-tile"><div className="doc-kpi-l">DAU</div><div className="doc-kpi-v mono">{adoption.dau}</div><div className="doc-kpi-s">daily readers</div></div>
+        <div className="doc-kpi-tile"><div className="doc-kpi-l">WAU</div><div className="doc-kpi-v mono">{adoption.wau}</div><div className="doc-kpi-s">weekly readers</div></div>
+        <div className="doc-kpi-tile"><div className="doc-kpi-l">MAU</div><div className="doc-kpi-v mono">{adoption.mau}</div><div className="doc-kpi-s">monthly readers</div></div>
+        <div className="doc-kpi-tile"><div className="doc-kpi-l">Total opens · 30d</div><div className="doc-kpi-v mono">{adoption.totalOpens30d.toLocaleString()}</div><div className="doc-kpi-s">+{adoption.newReaders30d} new readers</div></div>
+        <div className="doc-kpi-tile"><div className="doc-kpi-l">Unique readers</div><div className="doc-kpi-v mono">{adoption.totalViewers30d}</div><div className="doc-kpi-s">across all surfaces</div></div>
+        <div className="doc-kpi-tile"><div className="doc-kpi-l">Dormant</div><div className="doc-kpi-v mono">{adoption.dormantReports}</div><div className="doc-kpi-s">zero opens in 30d</div></div>
+      </div>
+      {top.length > 0 && (
+        <>
+          <h3 className="doc-h3">Top downstream surfaces</h3>
+          <table className="doc-table">
+            <thead><tr><th>Surface</th><th>Kind</th><th>Workspace</th><th>30d viewers</th><th>Last view</th></tr></thead>
+            <tbody>
+              {top.map((d, i) => (
+                <tr key={i}>
+                  <td><b>{d.item}</b></td>
+                  <td>{d.kind}</td>
+                  <td className="mono">{d.ws}</td>
+                  <td className="mono doc-td-num">{d.viewers}</td>
+                  <td className="mono">{d.lastView}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </>
+  );
+}
+
 function TablesOverview({ tables, dense }) {
   return (
     <>
@@ -786,15 +990,18 @@ function TablesOverview({ tables, dense }) {
           </tr>
         </thead>
         <tbody>
-          {tables.map(t => (
-            <tr key={t.name}>
-              <td><span className={'doc-tname doc-tname-' + t.kind}>{t.name}</span></td>
-              <td className="doc-td-tag">{t.kind}</td>
-              <td className="mono doc-td-num">{t.rows}</td>
-              <td className="mono doc-td-num">{t.cols}</td>
-              {!dense && <td className="mono">{t.partition}</td>}
-            </tr>
-          ))}
+          {tables.map(t => {
+            const gd = glossaryDescFor({ table: t.name });
+            return (
+              <tr key={t.name}>
+                <td><span className={'doc-tname doc-tname-' + t.kind}>{t.name}</span></td>
+                <td className="doc-td-tag">{t.kind}</td>
+                <td className="mono doc-td-num">{t.rows}</td>
+                <td className="mono doc-td-num">{t.cols}</td>
+                {!dense && <td className="mono">{t.partition}</td>}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </>
@@ -808,14 +1015,26 @@ function ColumnsForTable({ table }) {
       <table className="doc-table doc-table-cols">
         <thead><tr><th>Column</th><th>Type</th><th>Role</th><th>Description</th></tr></thead>
         <tbody>
-          {table.columns.map(c => (
-            <tr key={c.name}>
-              <td className="mono">{c.name}</td>
-              <td className="mono doc-td-type">{c.type}</td>
-              <td><span className="doc-role">{c.role}</span></td>
-              <td className="doc-td-desc">{c.desc || '—'}</td>
-            </tr>
-          ))}
+          {table.columns.map(c => {
+            // Operator rule: column description comes from an attached glossary
+            // term (dimension / business term / acronym) — never invented prose.
+            // Blank when nothing is attached.
+            const gd = glossaryDescFor({ column: `${table.name}[${c.name}]` });
+            return (
+              <tr key={c.name}>
+                <td className="mono">{c.name}</td>
+                <td className="mono doc-td-type">{c.type}</td>
+                <td><span className="doc-role">{c.role}</span></td>
+                <td className="doc-td-desc">
+                  {gd ? (
+                    <><span className="doc-col-gloss-tag" data-tone={gd.tone}>{gd.term}</span> {gd.def}</>
+                  ) : (
+                    <span style={{ color: '#cbd5e1' }}>—</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </>
@@ -850,23 +1069,45 @@ function MeasuresList({ measures, withDax }) {
     <>
       <h2 className="doc-h2">Measures</h2>
       <p className="doc-p doc-p-sub">{measures.length} documented measures across {Array.from(new Set(measures.map(m => m.folder.split(' · ')[0]))).length} folders.</p>
-      {measures.map(m => (
-        <div key={m.name} className="doc-measure">
-          <div className="doc-measure-head">
-            <span className="doc-measure-name mono">{m.name}</span>
-            <span className="doc-measure-folder">{m.folder}</span>
+      {measures.map(m => {
+        // Pull description from the attached business-glossary term
+        // (Metric / KPI) — operator rule: if no glossary term is attached,
+        // the measure renders WITHOUT a description.
+        const attached = DATA.glossary.items.filter(t =>
+          (t.linkedTo?.measures || []).includes(m.name)
+        );
+        const businessTerm = attached[0] || null;
+        const businessDef = businessTerm
+          ? (businessTerm.definition || '').split('. ')[0] + '.'
+          : null;
+        const typeMeta = businessTerm
+          ? DATA.glossary.types.find(t => t.key === businessTerm.type)
+          : null;
+        return (
+          <div key={m.name} className="doc-measure">
+            <div className="doc-measure-head">
+              <span className="doc-measure-name mono">{m.name}</span>
+              <span className="doc-measure-folder">{m.folder}</span>
+            </div>
+            <div className="doc-measure-meta">
+              <span><b>Format:</b> {m.format}</span>
+              <span className="sep">·</span>
+              <span><b>Depends on:</b> {m.dependsOn.map((d, i) => <code key={i} className="mono">{d}</code>).reduce((acc, el, i) => i === 0 ? [el] : [...acc, ', ', el], [])}</span>
+            </div>
+            {businessTerm ? (
+              <div className="doc-measure-desc">
+                <span className="doc-measure-glossary-tag" data-tone={typeMeta?.tone || 'slate'}>
+                  {typeMeta?.label || 'Glossary'} · {businessTerm.term}
+                </span>
+                <span>{businessDef}</span>
+              </div>
+            ) : null}
+            {withDax && (
+              <pre className="doc-dax mono">{m.dax}</pre>
+            )}
           </div>
-          <div className="doc-measure-meta">
-            <span><b>Format:</b> {m.format}</span>
-            <span className="sep">·</span>
-            <span><b>Depends on:</b> {m.dependsOn.map((d, i) => <code key={i} className="mono">{d}</code>).reduce((acc, el, i) => i === 0 ? [el] : [...acc, ', ', el], [])}</span>
-          </div>
-          <div className="doc-measure-desc">{m.desc}</div>
-          {withDax && (
-            <pre className="doc-dax mono">{m.dax}</pre>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </>
   );
 }
@@ -1000,18 +1241,58 @@ function ChangelogTable({ entries, limit }) {
   );
 }
 
-function GlossaryList({ terms }) {
+/* GlossaryList — pluggable title + subtitle. Now type-aware: if any term has
+   a `type` field, terms are grouped by type into separate dt/dd blocks with
+   subheadings (Metrics · KPIs · Acronyms · etc). */
+function GlossaryList({ terms, title = 'Business glossary', subtitle }) {
+  if (!terms || terms.length === 0) {
+    return (
+      <>
+        <h2 className="doc-h2">{title}</h2>
+        <p className="doc-p doc-p-sub">No glossary terms attached to this model yet — add them via LP /glossary.</p>
+      </>
+    );
+  }
+  // Group by type when present
+  const hasTypes = terms.some(t => t.type);
+  if (!hasTypes) {
+    return (
+      <>
+        <h2 className="doc-h2">{title}</h2>
+        {subtitle && <p className="doc-p doc-p-sub">{subtitle}</p>}
+        <dl className="doc-glossary">
+          {terms.map((t, i) => (
+            <React.Fragment key={i}>
+              <dt className="mono">{t.term}</dt>
+              <dd>{t.def}</dd>
+            </React.Fragment>
+          ))}
+        </dl>
+      </>
+    );
+  }
+  const order = ['metric', 'kpi', 'dimension', 'business', 'acronym', 'process'];
+  const labels = { metric: 'Metrics', kpi: 'KPIs', dimension: 'Dimensions', business: 'Business terms', acronym: 'Acronyms', process: 'Processes' };
+  const grouped = order
+    .map(k => ({ type: k, items: terms.filter(t => t.type === k) }))
+    .filter(g => g.items.length > 0);
   return (
     <>
-      <h2 className="doc-h2">Business glossary</h2>
-      <dl className="doc-glossary">
-        {terms.map((t, i) => (
-          <React.Fragment key={i}>
-            <dt className="mono">{t.term}</dt>
-            <dd>{t.def}</dd>
-          </React.Fragment>
-        ))}
-      </dl>
+      <h2 className="doc-h2">{title}</h2>
+      {subtitle && <p className="doc-p doc-p-sub">{subtitle}</p>}
+      {grouped.map(g => (
+        <React.Fragment key={g.type}>
+          <h3 className="doc-h3">{labels[g.type] || g.type}</h3>
+          <dl className="doc-glossary">
+            {g.items.map((t, i) => (
+              <React.Fragment key={i}>
+                <dt className="mono">{t.term}</dt>
+                <dd>{t.def}</dd>
+              </React.Fragment>
+            ))}
+          </dl>
+        </React.Fragment>
+      ))}
     </>
   );
 }
@@ -1105,6 +1386,9 @@ function auditorPages(ctx) {
       <p className="doc-p">Auditor sign-off block on the final page.</p>
     </>,
 
+    // 2.5 — Model maturity
+    <QualityScoreSection quality={s.quality} />,
+
     // 3 — Tables
     <>
       <TablesOverview tables={s.tables} />
@@ -1126,8 +1410,22 @@ function auditorPages(ctx) {
       <SensLabelsTable labels={s.sensLabels} />
     </>,
 
+    // 6.5 — Access (who can read; RLS scoping evidence)
+    <AccessSection access={s.access} audience="auditor" />,
+
+    // 6.7 — Refresh reliability evidence
+    <RefreshHistorySection refresh={s.refresh} audience="auditor" />,
+
     // 7 — Findings
     <FindingsList findings={s.findings} />,
+
+    // 7.5 — Compliance glossary appendix (Process + Acronym types)
+    <>
+      <GlossaryList
+        terms={ctx.attachedGlossary.filter(t => t.type === 'process' || t.type === 'acronym')}
+        title="Compliance terminology"
+        subtitle="Processes and acronyms relevant to this evidence pack — attached to the model in LayerPulse."/>
+    </>,
 
     // 8 — Owners + changelog + sign-off (pulls real roles from LP)
     <>
@@ -1205,8 +1503,17 @@ function analystPages(ctx) {
 
     <MeasuresList measures={s.measures} withDax={false} />,
 
+    // Model maturity — "is this trustworthy?"
+    <QualityScoreSection quality={s.quality} />,
+
+    // Refresh history — stale data = not trustworthy
+    <RefreshHistorySection refresh={s.refresh} audience="analyst" />,
+
+    // Adoption — where is this model used?
+    <AdoptionSection adoption={s.adoption} lineage={s.lineage} audience="analyst" />,
+
     <>
-      <GlossaryList terms={s.glossary} />
+      <GlossaryList terms={ctx.attachedGlossary} title="Business glossary" subtitle={`${ctx.attachedGlossary.length} terms attached to this model in LayerPulse · grouped by type`}/>
       <OwnersTable ctx={ctx} />
     </>,
   ];
@@ -1249,32 +1556,27 @@ function executivePages(ctx) {
       <ExecKpiGrid kpis={s.execSummary.kpis} narrative={s.execSummary.narrative + ' Fed reports total ' + s.lineage.downstream.reduce((a, x) => a + x.viewers, 0) + '+ viewers in the last 30 days; this model is the load-bearing source for executive-tier dashboards.'} big />
       <h2 className="doc-h2">Top measures</h2>
       <div className="doc-exec-measures">
-        {s.measures.slice(0, 4).map(m => (
-          <div key={m.name} className="doc-exec-measure">
-            <div className="doc-exec-measure-name mono">{m.name}</div>
-            <div className="doc-exec-measure-desc">{m.desc}</div>
-            <div className="doc-exec-measure-fmt mono">{m.format}</div>
-          </div>
-        ))}
+        {s.measures.slice(0, 4).map(m => {
+          const attached = DATA.glossary.items.filter(t => (t.linkedTo?.measures || []).includes(m.name))[0];
+          const def = attached ? (attached.definition || '').split('. ')[0] + '.' : null;
+          return (
+            <div key={m.name} className="doc-exec-measure">
+              <div className="doc-exec-measure-name mono">{m.name}</div>
+              {def
+                ? <div className="doc-exec-measure-desc">{def}</div>
+                : <div className="doc-exec-measure-desc" style={{ color: '#cbd5e1', fontStyle: 'italic' }}>No business term attached</div>}
+              <div className="doc-exec-measure-fmt mono">{m.format}</div>
+            </div>
+          );
+        })}
       </div>
     </>,
 
+    // Adoption — reach for the QBR
+    <AdoptionSection adoption={s.adoption} lineage={s.lineage} audience="executive" />,
+
     <>
-      <h2 className="doc-h2">Where this model shows up</h2>
-      <p className="doc-p">The Sales Analytics model directly powers <b>{s.lineage.downstream.length}</b> downstream surfaces. Top-3 by audience reach:</p>
-      <table className="doc-table">
-        <thead><tr><th>Surface</th><th>Workspace</th><th>30d viewers</th></tr></thead>
-        <tbody>
-          {[...s.lineage.downstream].sort((a, b) => b.viewers - a.viewers).slice(0, 5).map((d, i) => (
-            <tr key={i}>
-              <td><b>{d.item}</b></td>
-              <td className="mono">{d.ws}</td>
-              <td className="mono doc-td-num">{d.viewers}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <GlossaryList terms={s.glossary.slice(0, 4)} />
+      <GlossaryList terms={ctx.attachedGlossary.filter(t => t.type === 'kpi' || t.type === 'metric').slice(0, 6)} title="KPI &amp; metric definitions" subtitle="Business-canonical definitions of every KPI on the cover" />
     </>,
   ];
 }
@@ -1289,10 +1591,11 @@ function engineerPages(ctx) {
     <TocList items={[
       { title: '1 · Tables &amp; columns (full)',  page: 3 },
       { title: '2 · ER diagram',                page: 5 },
-      { title: '3 · Measures + DAX',            page: 6 },
-      { title: '4 · Relationships',             page: 8 },
-      { title: '5 · Lineage (upstream + down)', page: 9 },
-      { title: '6 · Change log',                page: 10 },
+      { title: '3 · Power Query (M)',           page: 6 },
+      { title: '4 · Measures + DAX',            page: 7 },
+      { title: '5 · Relationships + calc cols', page: 9 },
+      { title: '6 · Lineage · maturity · refresh · access · adoption', page: 10 },
+      { title: '7 · Change log + technical glossary', page: 15 },
     ]}/>,
 
     <>
@@ -1306,6 +1609,9 @@ function engineerPages(ctx) {
     </>,
 
     <ErDiagram erd={s.erd} rels={s.relationships} />,
+
+    // Power Query (M) — ingestion/transform layer, before DAX
+    <PowerQuerySection mQueries={s.mQueries} />,
 
     <MeasuresList measures={s.measures.slice(0, 4)} withDax />,
 
@@ -1329,7 +1635,25 @@ function engineerPages(ctx) {
 
     <LineageBlocks lineage={s.lineage} />,
 
+    // Model maturity — engineering scorecard
+    <QualityScoreSection quality={s.quality} />,
+
+    // Refresh history — first place to look when numbers go stale
+    <RefreshHistorySection refresh={s.refresh} audience="engineer" />,
+
+    // Access — verify RLS scoping ("does my RLS work?")
+    <AccessSection access={s.access} audience="engineer" />,
+
+    // Adoption — consumer load (what breaks if this model breaks)
+    <AdoptionSection adoption={s.adoption} lineage={s.lineage} audience="engineer" />,
+
     <ChangelogTable entries={s.changelog} />,
+
+    // Technical glossary appendix (Acronym + Dimension types) for engineer audience
+    <GlossaryList
+      terms={ctx.attachedGlossary.filter(t => t.type === 'acronym' || t.type === 'dimension')}
+      title="Technical glossary"
+      subtitle="Acronyms and dimensions used in this model — for engineers maintaining or extending it."/>,
   ];
 }
 
