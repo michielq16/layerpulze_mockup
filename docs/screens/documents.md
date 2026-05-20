@@ -48,25 +48,35 @@ Each preset assembles automated + manual sections differently. ✓ = present.
 
 | Section (source) | Auditor | Analyst | Executive | Engineer |
 |---|:-:|:-:|:-:|:-:|
-| Cover (auto + Owner/Domain from LP) | ✓ | ✓ | ✓ | ✓ |
+| Cover (auto + Owner/Domain + **certification badge**) | ✓ | ✓ | ✓ | ✓ |
 | Executive summary KPIs (auto) | ✓ | ✓ | ✓ big | ✓ |
+| **Custom executive note** (manual · owner free-text) | — | ✓ | ✓ | — |
 | TOC (auto) | — | ✓ | — | ✓ |
 | **Model maturity / quality score** (auto) | ✓ | ✓ | — | ✓ |
 | Scope & method (auto) | ✓ | — | — | — |
 | Tables + columns (auto schema · **glossary-driven descriptions**) | ✓ | ✓ | — | ✓ full |
 | Relationships (auto) | ✓ | ✓ | — | ✓ |
 | ER diagram (derived) | — | — | — | ✓ |
+| **Hierarchies** (auto) | — | ✓ | — | ✓ |
+| **Calc groups / perspectives / translations** (auto) | — | — | — | ✓ |
 | **Power Query (M)** (auto · ingestion layer) | — | — | — | ✓ |
 | Measures (auto DAX · **glossary-driven descriptions**) | ✓ named | ✓ no-DAX | ✓ top-4 | ✓ + DAX |
 | Calculated columns (auto) | — | — | — | ✓ |
+| **Measure usage / dormancy** (derived) | ✓ | — | — | ✓ |
 | RLS + sensitivity (auto) | ✓ | — | — | — |
+| **Object-level security (OLS)** (auto) | ✓ | — | — | ✓ |
 | **Access** (auto · RLS-scope mapping) | ✓ | — | — | ✓ |
-| **Refresh history** (auto) | ✓ | ✓ | — | ✓ |
+| **Refresh history (+ incremental policy)** (auto) | ✓ | ✓ | — | ✓ |
+| **Storage / size breakdown** (auto · VertiPaq) | — | — | — | ✓ |
+| **Capacity / cost attribution** (auto · CU + €) | ✓ | — | ✓ | ✓ |
 | **Adoption** (auto · downstream reach) | — | ✓ | ✓ | ✓ |
 | Lineage up/down (auto) | ✓ | ✓ | — | ✓ |
 | Change log (auto) | ✓ last-8 | — | — | ✓ full |
 | **Business glossary** (manual, see [[glossary]]) | compliance terms (Process+Acronym) | full · grouped by type | KPIs+Metrics only | technical (Acronym+Dimension) |
+| **Processes governing model** (manual) | ✓ | — | — | — |
 | **Owners + sign-off** (manual, see [[ownership]]) | ✓ Owner + Stewards sign-off | contact card (SME) | cover credit | — |
+
+> Full master list (incl. proposed-not-built rows): `docs/documents-section-catalogue.md`.
 
 ### The Owner/SME/Stewards binding (manual → doc)
 
