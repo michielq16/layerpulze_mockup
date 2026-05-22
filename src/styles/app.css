@@ -3690,3 +3690,54 @@ select.input::-ms-expand { display: none; }
 .doc-col-gloss-tag[data-tone="amber"]  { background: #fef3c7; color: #92400e; }
 .doc-col-gloss-tag[data-tone="emerald"]{ background: #d1fae5; color: #065f46; }
 .doc-col-gloss-tag[data-tone="rose"]   { background: #fee2e2; color: #991b1b; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Document modal — completeness sections (cert · exec-note · hierarchies ·
+   calc groups · object meta · cost grid reuse)
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Certification badge on the cover */
+.doc-cover-eyebrow-row { display: flex; align-items: center; gap: 12px; margin-top: 22px; align-self: flex-start; }
+.doc-cover-eyebrow-row .doc-cover-eyebrow { margin-top: 0; }
+.doc-cert-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9pt; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 4px;
+}
+.doc-cert-certified { background: #d1fae5; color: #065f46; }
+.doc-cert-promoted  { background: #fef3c7; color: #92400e; }
+
+/* Owner's note (manual exec note) */
+.doc-exec-note {
+  border-left: 3pt solid #0D3159;
+  background: #f8fafc;
+  padding: 12px 16px;
+  border-radius: 2px;
+  margin: 14px 0;
+}
+.doc-exec-note-eyebrow {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 8.5pt; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #64748b; margin-bottom: 6px;
+}
+.doc-exec-note-body { font-size: 11pt; line-height: 1.55; font-style: italic; }
+
+/* Hierarchies */
+.doc-hier { margin: 0 0 10px; padding: 8px 12px; border: 0.5pt solid #cbd5e1; border-radius: 3px; background: #fafafa; }
+.doc-hier-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.doc-hier-name { font-weight: 700; font-size: 11pt; color: #0D3159; }
+.doc-hier-table { font-size: 9pt; color: #94a3b8; }
+.doc-hier-levels { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.doc-hier-level { font-size: 9.5pt; padding: 2px 8px; background: #eef2ff; color: #1e40af; border-radius: 3px; }
+.doc-hier-arrow { color: #94a3b8; font-size: 9pt; }
+
+/* Calculation groups + model objects */
+.doc-calcgroup { margin: 0 0 10px; padding: 8px 12px; border: 0.5pt solid #cbd5e1; border-left: 3pt solid #6b21a8; border-radius: 3px; background: #fafafa; }
+.doc-calcgroup-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 5px; }
+.doc-calcgroup-name { font-weight: 700; font-size: 11pt; color: #6b21a8; }
+.doc-calcgroup-prec { font-size: 9pt; color: #94a3b8; }
+.doc-chip-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.doc-mini-chip { font-size: 8.5pt; padding: 1px 7px; border-radius: 3px; background: #f1f5f9; color: #475569; }
+.doc-objmeta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; margin-top: 12px; }
+.doc-objmeta > div { display: flex; flex-direction: column; gap: 2px; font-size: 10pt; }

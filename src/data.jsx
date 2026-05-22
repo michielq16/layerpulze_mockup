@@ -532,6 +532,91 @@ const DATA = {
         newReaders30d: 47,
         trend30: [88,92,104,96,118,142,138,101,87,95,112,128,134,122,108,98,132,148,156,144,128,112,94,106,124,138,152,146,134,118],
       },
+
+      /* ── Completeness sections (built 2026-05-20 from the master catalogue) ── */
+
+      // Object-Level Security — column/table hide rules per role (Scanner).
+      ols: [
+        { role: 'sg-sales-na',   object: 'FactSales[CostLCY]',        access: 'None', note: 'COGS hidden from regional sellers' },
+        { role: 'sg-sales-emea', object: 'FactSales[CostLCY]',        access: 'None', note: 'COGS hidden from regional sellers' },
+        { role: 'sg-smb-team',   object: 'DimCustomer[TierCode]',     access: 'None', note: 'Internal tiering hidden from SMB team' },
+        { role: 'sg-sales-apac', object: 'DimCustomer.Email',         access: 'None', note: 'PII column hidden' },
+      ],
+
+      // Hierarchies — dimension drill paths (Scanner).
+      hierarchies: [
+        { table: 'DimDate',      name: 'Calendar',  levels: ['FiscalYear', 'CalQuarter', 'YearMonth', 'Date'] },
+        { table: 'DimGeography', name: 'Geography', levels: ['Region', 'SubRegion', 'Country'] },
+        { table: 'DimProduct',   name: 'Product',   levels: ['Category', 'Subcategory', 'ProductName'] },
+        { table: 'DimCustomer',  name: 'Segment',   levels: ['Segment', 'TierCode', 'CustomerName'] },
+      ],
+
+      // Calculation groups / perspectives / translations (TMDL).
+      calcGroups: [
+        { name: 'Time Intelligence', precedence: 10, items: ['Current', 'YTD', 'QTD', 'MTD', 'PY', 'YoY %', 'YoY Δ'] },
+        { name: 'Currency',          precedence: 5,  items: ['LCY', 'USD', 'EUR'] },
+      ],
+      perspectives: ['Sales (default)', 'Finance close', 'Executive summary'],
+      translations: ['en-US (base)', 'nl-NL', 'de-DE'],
+
+      // Measure usage / dormancy (activity_events × DAX dependency parse).
+      measureUsage: {
+        total: 42, usedIn30d: 31, dormant: 11,
+        topUsed: [
+          { measure: '[Total Revenue (LCY)]',        reports: 11, opens30d: 4820 },
+          { measure: '[Gross Margin %]',             reports: 7,  opens30d: 2110 },
+          { measure: '[Total Revenue YoY %]',        reports: 6,  opens30d: 1980 },
+          { measure: '[Active Customers (90d)]',     reports: 4,  opens30d: 940 },
+        ],
+        dormantList: [
+          { measure: '[Old Revenue]',                lastUsed: 'never',   note: 'Superseded by [Total Revenue (LCY)] — safe to remove' },
+          { measure: '[Discount Impact]',           lastUsed: '90d+ ago', note: 'Zero report references' },
+          { measure: '[Running Total]',             lastUsed: 'never',   note: 'Authored but never surfaced' },
+        ],
+      },
+
+      // Storage / size breakdown (DMV — VertiPaq).
+      storage: {
+        totalMB: 612, compressionRatio: '11.4×',
+        byTable: [
+          { table: 'FactSales',    mb: 482, pct: 78.8, cardinalityCol: 'SalesKey (4.2M)' },
+          { table: 'DimCustomer',  mb: 78,  pct: 12.7, cardinalityCol: 'CustomerKey (847K)' },
+          { table: 'DimProduct',   mb: 31,  pct: 5.1,  cardinalityCol: 'ProductKey (12K)' },
+          { table: 'DimGeography', mb: 12,  pct: 2.0,  cardinalityCol: 'GeographyKey (4.2K)' },
+          { table: 'DimDate',      mb: 9,   pct: 1.4,  cardinalityCol: 'DateKey (14.6K)' },
+        ],
+      },
+
+      // Capacity / cost attribution (H1/H2 collectors).
+      cost: {
+        capacity: 'F64-prod-we', sku: 'F64',
+        cuPer30d: 184200, shareOfCapacityPct: 14.2, estCostEur30d: 921,
+        refreshCuPct: 62, querycuPct: 38,
+        trend: 'flat (±3% MoM)',
+        note: 'Refresh dominates CU. Incremental refresh (already on) keeps this from scaling with the 4.2M-row fact.',
+      },
+
+      // Incremental-refresh policy (TMDL) — rendered as a block on Refresh history.
+      incremental: {
+        enabled: true,
+        rangeStart: '2022-01-01',
+        rollingWindow: '36 months',
+        refreshGranularity: 'Day',
+        detectChanges: 'etl_batch_id',
+        note: 'Only the trailing window re-processes; partitions older than 36 months are sealed.',
+      },
+
+      // Certification / endorsement stamp (manual flag).
+      certification: {
+        status: 'Certified',           // Certified | Promoted | None
+        by: 'Marc Qureshi',
+        role: 'BI steward',
+        at: '2026-05-12',
+        note: 'Reviewed against the Finance data-quality checklist; approved for tenant-wide reuse.',
+      },
+
+      // Custom executive note (manual free-text the owner writes).
+      execNote: 'Sales Analytics is the single source of truth for tenant-wide revenue. As of this quarter it feeds 11 downstream reports across Finance, Sales, and Executive workspaces and is the basis for the board NRR metric. Treat any discrepancy here as authoritative over departmental spreadsheets. — Alex Rivera, Data lead',
     },
   },
 

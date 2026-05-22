@@ -752,8 +752,16 @@ function DocCover({ ctx, audienceLabel, audienceTone, subtitle, version }) {
         <span className="doc-cover-brand-tenant">Contoso Fabric</span>
       </div>
 
-      <div className="doc-cover-eyebrow" data-tone={audienceTone}>
-        {audienceLabel} report
+      <div className="doc-cover-eyebrow-row">
+        <div className="doc-cover-eyebrow" data-tone={audienceTone}>
+          {audienceLabel} report
+        </div>
+        {ctx.sample.certification?.status && ctx.sample.certification.status !== 'None' && (
+          <div className={'doc-cert-badge doc-cert-' + ctx.sample.certification.status.toLowerCase()}>
+            <Icon name="shield-check" size={12}/>
+            {ctx.sample.certification.status}
+          </div>
+        )}
       </div>
 
       <h1 className="doc-cover-title">{ctx.model}</h1>
@@ -841,7 +849,7 @@ function QualityScoreSection({ quality }) {
   );
 }
 
-function RefreshHistorySection({ refresh, audience }) {
+function RefreshHistorySection({ refresh, incremental, audience }) {
   if (!refresh) return null;
   const wk = refresh.windows.find(w => w.window === 'Last 7d');
   const stale = wk && wk.failed > 0;
@@ -883,6 +891,20 @@ function RefreshHistorySection({ refresh, audience }) {
               <div className="doc-finding-body" style={{ marginTop: 4 }}>{f.reason}</div>
             </div>
           ))}
+        </>
+      )}
+      {incremental?.enabled && (
+        <>
+          <h3 className="doc-h3">Incremental-refresh policy</h3>
+          <table className="doc-table">
+            <tbody>
+              <tr><td><b>Range start</b></td><td className="mono">{incremental.rangeStart}</td></tr>
+              <tr><td><b>Rolling window</b></td><td className="mono">{incremental.rollingWindow}</td></tr>
+              <tr><td><b>Granularity</b></td><td className="mono">{incremental.refreshGranularity}</td></tr>
+              <tr><td><b>Detect changes</b></td><td className="mono">{incremental.detectChanges}</td></tr>
+            </tbody>
+          </table>
+          <p className="doc-p" style={{ fontSize: '10pt' }}>{incremental.note}</p>
         </>
       )}
     </>
@@ -931,6 +953,169 @@ function PowerQuerySection({ mQueries }) {
           <pre className="doc-mcode mono">{q.m}</pre>
         </div>
       ))}
+    </>
+  );
+}
+
+function ExecNoteBlock({ note, owner }) {
+  if (!note) return null;
+  return (
+    <div className="doc-exec-note">
+      <div className="doc-exec-note-eyebrow">Owner's note</div>
+      <div className="doc-exec-note-body">{note}</div>
+    </div>
+  );
+}
+
+function OlsSection({ ols }) {
+  if (!ols || ols.length === 0) return null;
+  return (
+    <>
+      <h2 className="doc-h2">Object-level security (OLS)</h2>
+      <p className="doc-p doc-p-sub">{ols.length} hide rules — columns/tables made invisible to a role (distinct from RLS, which filters rows). Pairs with the Access section.</p>
+      <table className="doc-table">
+        <thead><tr><th>Role</th><th>Object hidden</th><th>Access</th><th>Reason</th></tr></thead>
+        <tbody>
+          {ols.map((o, i) => (
+            <tr key={i}>
+              <td className="mono">{o.role}</td>
+              <td className="mono">{o.object}</td>
+              <td><span className="doc-rls-state off">{o.access}</span></td>
+              <td className="doc-td-desc">{o.note}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
+function HierarchiesSection({ hierarchies }) {
+  if (!hierarchies || hierarchies.length === 0) return null;
+  return (
+    <>
+      <h2 className="doc-h2">Hierarchies</h2>
+      <p className="doc-p doc-p-sub">{hierarchies.length} drill paths for dimensional navigation.</p>
+      {hierarchies.map(h => (
+        <div key={h.name} className="doc-hier">
+          <div className="doc-hier-head">
+            <span className="doc-hier-name">{h.name}</span>
+            <span className="doc-hier-table mono">{h.table}</span>
+          </div>
+          <div className="doc-hier-levels">
+            {h.levels.map((l, i) => (
+              <React.Fragment key={l}>
+                <span className="doc-hier-level mono">{l}</span>
+                {i < h.levels.length - 1 && <span className="doc-hier-arrow">→</span>}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function CalcGroupsSection({ calcGroups, perspectives, translations }) {
+  if (!calcGroups || calcGroups.length === 0) return null;
+  return (
+    <>
+      <h2 className="doc-h2">Calculation groups &amp; model objects</h2>
+      <p className="doc-p doc-p-sub">{calcGroups.length} calculation groups · {perspectives?.length || 0} perspectives · {translations?.length || 0} translations.</p>
+      {calcGroups.map(cg => (
+        <div key={cg.name} className="doc-calcgroup">
+          <div className="doc-calcgroup-head">
+            <span className="doc-calcgroup-name">{cg.name}</span>
+            <span className="doc-calcgroup-prec mono">precedence {cg.precedence}</span>
+          </div>
+          <div className="doc-chip-row">
+            {cg.items.map(it => <span key={it} className="doc-mini-chip mono">{it}</span>)}
+          </div>
+        </div>
+      ))}
+      <div className="doc-objmeta">
+        <div><span className="lp-eyebrow">Perspectives</span><span>{(perspectives || []).join(' · ')}</span></div>
+        <div><span className="lp-eyebrow">Translations</span><span>{(translations || []).join(' · ')}</span></div>
+      </div>
+    </>
+  );
+}
+
+function MeasureUsageSection({ usage }) {
+  if (!usage) return null;
+  return (
+    <>
+      <h2 className="doc-h2">Measure usage &amp; dormancy</h2>
+      <p className="doc-p doc-p-sub">{usage.usedIn30d} of {usage.total} measures referenced by a report in the last 30 days · <b style={{ color: '#b45309' }}>{usage.dormant} dormant</b> (candidates for cleanup).</p>
+      <h3 className="doc-h3">Top used</h3>
+      <table className="doc-table">
+        <thead><tr><th>Measure</th><th>Reports</th><th>Opens · 30d</th></tr></thead>
+        <tbody>
+          {usage.topUsed.map((m, i) => (
+            <tr key={i}>
+              <td className="mono">{m.measure}</td>
+              <td className="mono doc-td-num">{m.reports}</td>
+              <td className="mono doc-td-num">{m.opens30d.toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <h3 className="doc-h3">Dormant — cleanup candidates</h3>
+      {usage.dormantList.map((d, i) => (
+        <div key={i} className="doc-finding doc-finding-info" style={{ marginBottom: 8 }}>
+          <div className="doc-finding-head">
+            <span className="doc-finding-sev doc-finding-sev-info">dormant</span>
+            <span className="doc-finding-title mono" style={{ fontSize: '10pt' }}>{d.measure}</span>
+            <span style={{ marginLeft: 'auto', fontSize: '9pt', color: '#94a3b8' }}>last used {d.lastUsed}</span>
+          </div>
+          <div className="doc-finding-body" style={{ marginTop: 4 }}>{d.note}</div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function StorageSection({ storage }) {
+  if (!storage) return null;
+  return (
+    <>
+      <h2 className="doc-h2">Storage &amp; size</h2>
+      <p className="doc-p doc-p-sub">{storage.totalMB} MB in-memory · {storage.compressionRatio} VertiPaq compression. Largest tables drive refresh time + capacity cost.</p>
+      <table className="doc-table">
+        <thead><tr><th>Table</th><th>Size</th><th>Share</th><th>Highest-cardinality column</th></tr></thead>
+        <tbody>
+          {storage.byTable.map((t, i) => (
+            <tr key={i}>
+              <td className="mono"><b>{t.table}</b></td>
+              <td className="mono doc-td-num">{t.mb} MB</td>
+              <td className="mono doc-td-num">{t.pct}%</td>
+              <td className="mono doc-td-desc">{t.cardinalityCol}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
+function CostAttributionSection({ cost, audience }) {
+  if (!cost) return null;
+  const note = audience === 'executive'
+    ? 'What this model costs to run — its share of the capacity bill.'
+    : audience === 'auditor'
+      ? 'Capacity-cost evidence for chargeback / showback.'
+      : 'CU consumption — refresh vs query split tells you where to optimize.';
+  return (
+    <>
+      <h2 className="doc-h2">Capacity &amp; cost</h2>
+      <p className="doc-p doc-p-sub">{note}</p>
+      <div className="doc-kpi-grid">
+        <div className="doc-kpi-tile"><div className="doc-kpi-l">Capacity</div><div className="doc-kpi-v mono" style={{ fontSize: '14pt' }}>{cost.sku}</div><div className="doc-kpi-s">{cost.capacity}</div></div>
+        <div className="doc-kpi-tile"><div className="doc-kpi-l">CU · 30d</div><div className="doc-kpi-v mono">{cost.cuPer30d.toLocaleString()}</div><div className="doc-kpi-s">{cost.shareOfCapacityPct}% of capacity</div></div>
+        <div className="doc-kpi-tile"><div className="doc-kpi-l">Est. cost · 30d</div><div className="doc-kpi-v mono">€{cost.estCostEur30d}</div><div className="doc-kpi-s">{cost.trend}</div></div>
+        <div className="doc-kpi-tile"><div className="doc-kpi-l">Refresh / Query</div><div className="doc-kpi-v mono" style={{ fontSize: '15pt' }}>{cost.refreshCuPct}/{cost.querycuPct}</div><div className="doc-kpi-s">CU split %</div></div>
+      </div>
+      <p className="doc-p" style={{ fontSize: '10pt', marginTop: 8 }}>{cost.note}</p>
     </>
   );
 }
@@ -1404,20 +1589,27 @@ function auditorPages(ctx) {
     // 5 — Relationships
     <RelationshipsTable rels={s.relationships} />,
 
-    // 6 — RLS + Sensitivity
+    // 6 — RLS + Sensitivity + OLS
     <>
       <RlsTable rls={s.rls} />
+      <OlsSection ols={s.ols} />
       <SensLabelsTable labels={s.sensLabels} />
     </>,
 
     // 6.5 — Access (who can read; RLS scoping evidence)
     <AccessSection access={s.access} audience="auditor" />,
 
-    // 6.7 — Refresh reliability evidence
-    <RefreshHistorySection refresh={s.refresh} audience="auditor" />,
+    // 6.7 — Refresh reliability evidence (+ incremental policy)
+    <RefreshHistorySection refresh={s.refresh} incremental={s.incremental} audience="auditor" />,
 
-    // 7 — Findings
+    // 6.9 — Capacity / cost evidence
+    <CostAttributionSection cost={s.cost} audience="auditor" />,
+
+    // 7 — Findings + measure hygiene
     <FindingsList findings={s.findings} />,
+
+    // 7.2 — Measure usage / dormancy (governance hygiene)
+    <MeasureUsageSection usage={s.measureUsage} />,
 
     // 7.5 — Compliance glossary appendix (Process + Acronym types)
     <>
@@ -1481,10 +1673,11 @@ function analystPages(ctx) {
 
     <>
       <ExecKpiGrid kpis={s.execSummary.kpis} narrative={s.execSummary.narrative + ' Use this document as your starting point — most analyst questions are answered in the Measures and Glossary sections.'} />
+      <ExecNoteBlock note={s.execNote}/>
       <ContactCard ctx={ctx}/>
       <TocList items={[
         { title: '1 · Tables &amp; columns',   page: 3 },
-        { title: '2 · Relationships',        page: 4 },
+        { title: '2 · Relationships + hierarchies', page: 4 },
         { title: '3 · Measures (no DAX)',    page: 5 },
         { title: '4 · Glossary &amp; owners',   page: 6 },
       ]}/>
@@ -1499,6 +1692,7 @@ function analystPages(ctx) {
       <h2 className="doc-h2">Columns — dimensions</h2>
       {s.tables.slice(1).map(t => <ColumnsForTable key={t.name} table={t} />)}
       <RelationshipsTable rels={s.relationships} />
+      <HierarchiesSection hierarchies={s.hierarchies} />
     </>,
 
     <MeasuresList measures={s.measures} withDax={false} />,
@@ -1507,7 +1701,7 @@ function analystPages(ctx) {
     <QualityScoreSection quality={s.quality} />,
 
     // Refresh history — stale data = not trustworthy
-    <RefreshHistorySection refresh={s.refresh} audience="analyst" />,
+    <RefreshHistorySection refresh={s.refresh} incremental={s.incremental} audience="analyst" />,
 
     // Adoption — where is this model used?
     <AdoptionSection adoption={s.adoption} lineage={s.lineage} audience="analyst" />,
@@ -1554,6 +1748,7 @@ function executivePages(ctx) {
 
     <>
       <ExecKpiGrid kpis={s.execSummary.kpis} narrative={s.execSummary.narrative + ' Fed reports total ' + s.lineage.downstream.reduce((a, x) => a + x.viewers, 0) + '+ viewers in the last 30 days; this model is the load-bearing source for executive-tier dashboards.'} big />
+      <ExecNoteBlock note={s.execNote}/>
       <h2 className="doc-h2">Top measures</h2>
       <div className="doc-exec-measures">
         {s.measures.slice(0, 4).map(m => {
@@ -1574,6 +1769,9 @@ function executivePages(ctx) {
 
     // Adoption — reach for the QBR
     <AdoptionSection adoption={s.adoption} lineage={s.lineage} audience="executive" />,
+
+    // Capacity / cost — what this model costs to run
+    <CostAttributionSection cost={s.cost} audience="executive" />,
 
     <>
       <GlossaryList terms={ctx.attachedGlossary.filter(t => t.type === 'kpi' || t.type === 'metric').slice(0, 6)} title="KPI &amp; metric definitions" subtitle="Business-canonical definitions of every KPI on the cover" />
@@ -1610,12 +1808,21 @@ function engineerPages(ctx) {
 
     <ErDiagram erd={s.erd} rels={s.relationships} />,
 
+    // Hierarchies + calculation groups / perspectives / translations
+    <>
+      <HierarchiesSection hierarchies={s.hierarchies} />
+      <CalcGroupsSection calcGroups={s.calcGroups} perspectives={s.perspectives} translations={s.translations} />
+    </>,
+
     // Power Query (M) — ingestion/transform layer, before DAX
     <PowerQuerySection mQueries={s.mQueries} />,
 
     <MeasuresList measures={s.measures.slice(0, 4)} withDax />,
 
     <MeasuresList measures={s.measures.slice(4)} withDax />,
+
+    // Measure usage / dormancy
+    <MeasureUsageSection usage={s.measureUsage} />,
 
     <>
       <RelationshipsTable rels={s.relationships} />
@@ -1633,16 +1840,25 @@ function engineerPages(ctx) {
       </table>
     </>,
 
+    // Storage / size breakdown (VertiPaq)
+    <StorageSection storage={s.storage} />,
+
+    // OLS — pairs with the Access section for full security picture
+    <OlsSection ols={s.ols} />,
+
     <LineageBlocks lineage={s.lineage} />,
 
     // Model maturity — engineering scorecard
     <QualityScoreSection quality={s.quality} />,
 
-    // Refresh history — first place to look when numbers go stale
-    <RefreshHistorySection refresh={s.refresh} audience="engineer" />,
+    // Refresh history (+ incremental policy) — first place to look when numbers go stale
+    <RefreshHistorySection refresh={s.refresh} incremental={s.incremental} audience="engineer" />,
 
     // Access — verify RLS scoping ("does my RLS work?")
     <AccessSection access={s.access} audience="engineer" />,
+
+    // Capacity / cost — CU consumption + refresh/query split
+    <CostAttributionSection cost={s.cost} audience="engineer" />,
 
     // Adoption — consumer load (what breaks if this model breaks)
     <AdoptionSection adoption={s.adoption} lineage={s.lineage} audience="engineer" />,
