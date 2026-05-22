@@ -83,6 +83,7 @@ const SCHEDULE_LABELS = {
 };
 
 export const AUDIENCE_LABELS = {
+  complete:  { label: 'Complete',  tone: 'emerald', sub: 'Full-scope canonical document' },
   auditor:   { label: 'Auditor',   tone: 'rose',   sub: 'SOC 2 / HIPAA evidence' },
   analyst:   { label: 'Analyst',   tone: 'sky',    sub: 'Onboarding handoff'    },
   executive: { label: 'Executive', tone: 'amber',  sub: 'QBR-ready summary'      },
@@ -542,7 +543,7 @@ function DocumentsGenerate({ onBackToLibrary, onPreview }) {
    ───────────────────────────────────────────────────────────────────────── */
 
 export function DocumentPreviewModal({ model, ws, env = 'PROD', audience: initialAudience, format: initialFormat, includeLogo = true, generatedAt, sections, status, fromGenerate, onClose, onCommit }) {
-  const [audience, setAudience] = React.useState(initialAudience || 'analyst');
+  const [audience, setAudience] = React.useState(initialAudience || 'complete');
   const [format, setFormat]     = React.useState(initialFormat || 'docx');
   const [currentPage, setCurrentPage] = React.useState(1);
   const bodyRef = React.useRef(null);
@@ -649,9 +650,9 @@ export function DocumentPreviewModal({ model, ws, env = 'PROD', audience: initia
 
           <div className="doc-modal-toolbar">
             <div className="doc-modal-aud-switch">
-              <span className="lp-eyebrow">Audience</span>
+              <span className="lp-eyebrow">View</span>
               <div className="seg-tabs seg-tabs-sm">
-                {['auditor','analyst','executive','engineer'].map(a => (
+                {['complete','auditor','analyst','executive','engineer'].map(a => (
                   <button
                     key={a}
                     className={'seg-tab' + (audience === a ? ' active' : '')}
@@ -717,7 +718,7 @@ export function DocumentPreviewModal({ model, ws, env = 'PROD', audience: initia
           </div>
           <div className="doc-modal-foot-meta">
             <Icon name="info" size={11}/>
-            <span>Mockup preview · server-side .{format} renderer ships canonical layout. Switch audience above to see the 4 variants.</span>
+            <span>Mockup preview · <b>Complete</b> is the canonical full-scope document; the 4 audience views are lenses (subsets) of it.</span>
           </div>
         </div>
       </div>
@@ -733,6 +734,7 @@ export function DocumentPreviewModal({ model, ws, env = 'PROD', audience: initia
    ───────────────────────────────────────────────────────────────────────── */
 
 function buildDocPages(audience, ctx) {
+  if (audience === 'complete')  return completePages(ctx);
   if (audience === 'auditor')   return auditorPages(ctx);
   if (audience === 'analyst')   return analystPages(ctx);
   if (audience === 'executive') return executivePages(ctx);
@@ -1870,6 +1872,276 @@ function engineerPages(ctx) {
       terms={ctx.attachedGlossary.filter(t => t.type === 'acronym' || t.type === 'dimension')}
       title="Technical glossary"
       subtitle="Acronyms and dimensions used in this model — for engineers maintaining or extending it."/>,
+  ];
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   COMPLETE document — the single maximum-value canonical render.
+   Three tiers: fused cover scorecard → briefing body (group-led, source-tagged)
+   → exhaustive appendices. See docs/plans/2026-05-22-complete-document-design.md.
+   ───────────────────────────────────────────────────────────────────────── */
+
+const SRC_META = {
+  auto:    { lbl: 'Automated · Fabric API', color: '#16a34a' },
+  manual:  { lbl: 'Manual · LayerPulse',    color: '#7c3aed' },
+  derived: { lbl: 'Derived',                color: '#0891b2' },
+};
+
+function GroupLead({ n, title, source = 'auto' }) {
+  const m = SRC_META[source];
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 0 14px', paddingBottom: 8, borderBottom: '2px solid #e5e8ec' }}>
+      <span className="mono" style={{ fontSize: '10pt', fontWeight: 700, color: '#94a3b8' }}>{n}</span>
+      <h2 className="doc-h2" style={{ margin: 0, border: 'none', padding: 0, flex: 1 }}>{title}</h2>
+      <span style={{ fontSize: '7.5pt', fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', color: m.color, background: m.color + '1a', padding: '3px 9px', borderRadius: 5, whiteSpace: 'nowrap' }}>{m.lbl}</span>
+    </div>
+  );
+}
+
+function TierDivider({ label, sub }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '20px 0' }}>
+      <div className="mono" style={{ fontSize: '9pt', letterSpacing: '.18em', color: '#94a3b8', fontWeight: 700 }}>{label}</div>
+      {sub && <div style={{ fontSize: '9.5pt', color: '#64748b', marginTop: 6, maxWidth: 460, margin: '6px auto 0' }}>{sub}</div>}
+    </div>
+  );
+}
+
+function SignOffBlock({ ctx }) {
+  return (
+    <div className="doc-signoff">
+      <h3 className="doc-h3" style={{ marginTop: 22, marginBottom: 14 }}>Sign-off</h3>
+      <p className="doc-p doc-p-sub">Signatures from the LP-captured Owner and Stewards.</p>
+      <div className="doc-signoff-row">
+        <div className="doc-signoff-cell">
+          <div className="doc-signoff-label">Owner</div>
+          <div style={{ fontSize: '10pt', fontWeight: 600, marginTop: 6 }}>{ctx.owner ? ctx.owner.name : <em style={{ color: '#b91c1c' }}>— not assigned —</em>}</div>
+          <div className="doc-signoff-line"/>
+          <div className="doc-signoff-sub">Signature · date</div>
+        </div>
+        {ctx.stewards.length === 0 ? (
+          <div className="doc-signoff-cell">
+            <div className="doc-signoff-label">Steward</div>
+            <div style={{ fontSize: '9pt', color: '#b91c1c', fontStyle: 'italic', marginTop: 6 }}>No stewards assigned in LP.</div>
+            <div className="doc-signoff-line"/>
+            <div className="doc-signoff-sub">Add via /ownership</div>
+          </div>
+        ) : (
+          ctx.stewards.slice(0, 2).map((st, i) => (
+            <div key={st.userEmail} className="doc-signoff-cell">
+              <div className="doc-signoff-label">Steward · {i + 1}</div>
+              <div style={{ fontSize: '10pt', fontWeight: 600, marginTop: 6 }}>{st.name}</div>
+              <div className="doc-signoff-line"/>
+              <div className="doc-signoff-sub">Signature · date</div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CompleteCover({ ctx }) {
+  const s = ctx.sample;
+  const q = s.quality;
+  const cert = s.certification;
+  const purpose = (s.execSummary.narrative || '').split('. ')[0] + '.';
+  const barColor = (v) => v >= 8 ? '#16a34a' : v >= 6.5 ? '#ca8a04' : '#dc2626';
+  const glossN = ctx.attachedGlossary.length;
+  const procN = ctx.attachedGlossary.filter(t => t.type === 'process').length;
+  const meter = [
+    { k: 'Owner', ok: !!ctx.owner },
+    { k: 'SME', ok: !!ctx.sme },
+    { k: `Stewards (${ctx.stewards.length})`, ok: ctx.stewards.length > 0 },
+    { k: `Glossary (${glossN})`, ok: glossN > 0 },
+    { k: 'Processes', ok: procN > 0 },
+  ];
+  return (
+    <div className="doc-cover">
+      <div className="doc-cover-brand">
+        {ctx.includeLogo && <div className="doc-cover-logo">LP</div>}
+        <span className="doc-cover-brand-name">LayerPulse</span>
+        <span className="doc-cover-brand-sep">·</span>
+        <span className="doc-cover-brand-tenant">Contoso Fabric</span>
+      </div>
+
+      <div className="doc-cover-eyebrow-row">
+        <div className="doc-cover-eyebrow" data-tone="emerald">Complete document · full scope</div>
+        {cert?.status && cert.status !== 'None' && (
+          <div className={'doc-cert-badge doc-cert-' + cert.status.toLowerCase()}>
+            <Icon name="shield-check" size={12}/>{cert.status} · {cert.by}
+          </div>
+        )}
+      </div>
+
+      <h1 className="doc-cover-title">{ctx.model}</h1>
+      <div className="doc-cover-sub">{purpose}</div>
+
+      {/* Scorecard: health + dimensions */}
+      <div style={{ display: 'flex', gap: 20, marginTop: 18, alignItems: 'stretch' }}>
+        <div style={{ flex: '0 0 124px', border: '1px solid #e5e8ec', borderRadius: 10, padding: '14px 12px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div className="mono" style={{ fontSize: '30pt', fontWeight: 700, lineHeight: 1, color: barColor(q.score) }}>{q.score.toFixed(1)}</div>
+          <div style={{ fontSize: '8.5pt', color: '#64748b', marginTop: 2 }}>/ 10 · {q.tier}</div>
+          <div style={{ fontSize: '8pt', color: '#94a3b8', marginTop: 6 }}>Health score</div>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div className="doc-quality-bars">
+            {q.breakdown.map(b => (
+              <div key={b.dim} className="doc-quality-row">
+                <span className="doc-quality-dim">{b.dim}</span>
+                <span className="doc-quality-track"><span className="doc-quality-fill" style={{ width: (b.val * 10) + '%', background: barColor(b.val) }}/></span>
+                <span className="mono doc-quality-val">{b.val.toFixed(1)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Headline KPIs */}
+      <div className="doc-kpi-grid" style={{ marginTop: 16 }}>
+        {s.execSummary.kpis.slice(0, 4).map(k => (
+          <div key={k.label} className="doc-kpi-tile">
+            <div className="doc-kpi-l">{k.label}</div>
+            <div className="doc-kpi-v mono">{k.value}</div>
+            <div className="doc-kpi-s">{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Identity + ownership meta */}
+      <div className="doc-cover-meta" style={{ marginTop: 16 }}>
+        <div><span className="doc-cover-k">Workspace</span><span className="doc-cover-v mono">{ctx.ws}</span></div>
+        <div><span className="doc-cover-k">Environment</span><span className="doc-cover-v mono">{ctx.env}</span></div>
+        <div><span className="doc-cover-k">Domain</span><span className="doc-cover-v">{ctx.domain ? ctx.domain.label : '— not set —'}</span></div>
+        <div><span className="doc-cover-k">Owner</span><span className="doc-cover-v">{ctx.owner ? ctx.owner.name : <em style={{ color: '#b91c1c' }}>— not assigned —</em>}{ctx.owner?.source === 'workspace' && <span style={{ fontSize: '8pt', color: '#94a3b8', marginLeft: 5 }}>(inherited)</span>}</span></div>
+        <div><span className="doc-cover-k">SME</span><span className="doc-cover-v">{ctx.sme ? ctx.sme.name : <em style={{ color: '#94a3b8' }}>— not set —</em>}</span></div>
+        <div><span className="doc-cover-k">Generated</span><span className="doc-cover-v">{ctx.generatedAt}</span></div>
+      </div>
+
+      {/* Manual-layer completeness meter */}
+      <div style={{ marginTop: 16, padding: '12px 14px', background: '#f8fafc', border: '1px solid #e5e8ec', borderRadius: 10 }}>
+        <div style={{ fontSize: '8pt', fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: '#64748b', marginBottom: 8 }}>Manual layer completeness</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {meter.map(m => (
+            <span key={m.k} style={{ fontSize: '8.5pt', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 6, background: m.ok ? '#dcfce7' : '#fee2e2', color: m.ok ? '#166534' : '#991b1b' }}>
+              {m.ok ? '✓' : '✗'} {m.k}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Source legend */}
+      <div className="doc-cover-foot" style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        <span><b style={{ color: '#16a34a' }}>● Automated</b> — Fabric Scanner / Admin API / Metrics App</span>
+        <span><b style={{ color: '#7c3aed' }}>● Manual</b> — captured in LayerPulse (ownership, glossary)</span>
+      </div>
+    </div>
+  );
+}
+
+function completePages(ctx) {
+  const s = ctx.sample;
+  const g = ctx.attachedGlossary;
+  return [
+    <CompleteCover key="cov" ctx={ctx} />,
+
+    <TocList items={[
+      { title: 'Tier 1 · Cover scorecard',              page: 1 },
+      { title: '1 · Executive summary + owner note',    page: 3 },
+      { title: '2 · Trust &amp; health',                page: 4 },
+      { title: '3 · Schema (tables · relationships · ER · hierarchies)', page: 5 },
+      { title: '4 · Logic (measures · calc groups)',    page: 7 },
+      { title: '5 · Governance &amp; security',         page: 8 },
+      { title: '6 · Lineage &amp; usage',               page: 10 },
+      { title: '7 · Business context (glossary)',       page: 12 },
+      { title: '8 · Ownership &amp; sign-off',          page: 13 },
+      { title: 'Appendix A–D · exhaustive reference',   page: 14 },
+    ]}/>,
+
+    // ── Tier 2 · body ──
+    <>
+      <GroupLead n="1" title="Executive summary" source="auto"/>
+      <ExecKpiGrid kpis={s.execSummary.kpis} narrative={s.execSummary.narrative}/>
+      <ExecNoteBlock note={s.execNote}/>
+    </>,
+
+    <>
+      <GroupLead n="2" title="Trust & health" source="auto"/>
+      <QualityScoreSection quality={s.quality}/>
+      <RefreshHistorySection refresh={s.refresh} incremental={s.incremental} audience="engineer"/>
+      <FindingsList findings={s.findings}/>
+    </>,
+
+    <>
+      <GroupLead n="3" title="Schema — tables & relationships" source="auto"/>
+      <TablesOverview tables={s.tables}/>
+      <RelationshipsTable rels={s.relationships}/>
+    </>,
+    <>
+      <ErDiagram erd={s.erd} rels={s.relationships}/>
+      <HierarchiesSection hierarchies={s.hierarchies}/>
+    </>,
+
+    <>
+      <GroupLead n="4" title="Logic — measures & calc groups" source="auto"/>
+      <p className="doc-p doc-p-sub">Descriptions are drawn from attached business-glossary terms; measures with no term attached show no description (see Appendix B for full DAX).</p>
+      <MeasuresList measures={s.measures.slice(0, 8)}/>
+      <CalcGroupsSection calcGroups={s.calcGroups} perspectives={s.perspectives} translations={s.translations}/>
+    </>,
+
+    <>
+      <GroupLead n="5" title="Governance & security" source="auto"/>
+      <RlsTable rls={s.rls}/>
+      <OlsSection ols={s.ols}/>
+      <SensLabelsTable labels={s.sensLabels}/>
+    </>,
+    <AccessSection access={s.access} audience="auditor"/>,
+
+    <>
+      <GroupLead n="6" title="Lineage & usage" source="auto"/>
+      <LineageBlocks lineage={s.lineage}/>
+      <AdoptionSection adoption={s.adoption} lineage={s.lineage} audience="engineer"/>
+    </>,
+    <>
+      <StorageSection storage={s.storage}/>
+      <CostAttributionSection cost={s.cost} audience="engineer"/>
+    </>,
+
+    <>
+      <GroupLead n="7" title="Business context" source="manual"/>
+      <GlossaryList terms={g} title="Business glossary"
+        subtitle="Every term attached to this model in LayerPulse, grouped by type. Measure, column, and table descriptions throughout this document are drawn from these definitions — nothing is invented."/>
+    </>,
+
+    <>
+      <GroupLead n="8" title="Ownership & sign-off" source="manual"/>
+      <OwnersTable ctx={ctx}/>
+      <ChangelogTable entries={s.changelog} limit={8}/>
+      <SignOffBlock ctx={ctx}/>
+    </>,
+
+    // ── Tier 3 · appendices ──
+    <TierDivider label="A P P E N D I C E S" sub="Exhaustive reference — the full inventories that would bloat the briefing body above."/>,
+
+    <>
+      <GroupLead n="A" title="Appendix A — full column inventory" source="auto"/>
+      {s.tables.map(t => <ColumnsForTable key={t.name} table={t}/>)}
+    </>,
+
+    <>
+      <GroupLead n="B" title="Appendix B — full DAX" source="auto"/>
+      <MeasuresList measures={s.measures} withDax/>
+    </>,
+
+    <>
+      <GroupLead n="C" title="Appendix C — Power Query (M)" source="auto"/>
+      <PowerQuerySection mQueries={s.mQueries}/>
+    </>,
+
+    <>
+      <GroupLead n="D" title="Appendix D — measure usage & dormancy" source="derived"/>
+      <MeasureUsageSection usage={s.measureUsage}/>
+    </>,
   ];
 }
 
