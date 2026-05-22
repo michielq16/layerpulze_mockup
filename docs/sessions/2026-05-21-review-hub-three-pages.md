@@ -16,8 +16,8 @@ Append-only delta log. Prior frozen log: `2026-05-18-mockup-overhaul.md`. Read C
 
 ## Gotchas locked this session
 
-- **`docs/prds/ownership.md` does NOT exist** — only `docs/screens/ownership.md`. Ownership PRD is authored LP-side at handover. Both the hub Spec link and ownership.html footer point to the **screen narrative**, not a PRD. Don't relink to a prds/ownership.md path (it 404s).
-- Confirmed present: `docs/prds/documents.md`, `docs/prds/glossary.md`, `docs/screens/glossary.md`, `docs/screens/ownership.md`.
+- **`docs/prds/ownership.md` now exists** (written this session, after the review pages — operator asked for symmetry). All three bundles now have screen.md + prd.md + review.html + screenshots + live route. Hub Spec link + ownership.html footer point to the PRD (+ screen narrative), matching Glossary.
+- Confirmed present: `docs/prds/{documents,glossary,ownership}.md`, `docs/screens/{glossary,ownership}.md`, `docs/analysis/fabric-artifact-ownership-conventions.md`.
 - Static `public/review/*.html` is served by Vercel before the SPA catch-all rewrite — `/review/glossary.html` resolves directly, no vercel.json change.
 
 ## Open threads
