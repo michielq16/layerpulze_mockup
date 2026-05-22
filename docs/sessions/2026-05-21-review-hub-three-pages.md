@@ -22,6 +22,15 @@ Append-only delta log. Prior frozen log: `2026-05-18-mockup-overhaul.md`. Read C
 
 ## Open threads
 
-- **Screenshots** for the handover bundle (`docs/handover/screenshots/<screen>/`) — still NOT captured; Chrome extension was disconnected. Conditional on reconnect.
 - Documents PRD already fed to LP-side by operator (awaiting their read).
 - Glossary still needs a BACKLOG.md Tier row (not yet in backlog — flagged prior session).
+
+## Session continuation (2026-05-22, sync-memory)
+
+- **Screenshots captured** (the open thread above is closed). Used **Playwright against local dev**, not the Vercel branch preview — preview has Deployment Protection so headless Playwright (cookie-less context) hits the auth wall; local dev also has the un-merged branch work. Script committed at `scripts/capture-handover-screenshots.mjs`; PNGs in `docs/handover/screenshots/{documents,glossary,ownership}/` (library + preview modal + A–Z + ownership defaults, viewport + full-page). The in-Chrome MCP browser worked but its `save_to_disk` doesn't surface a file path → can't commit those; Playwright is the right tool when the file is the deliverable.
+- **Ownership PRD written** (`docs/prds/ownership.md`) matching the Glossary PRD shape → all three bundles symmetric (screen + prd + review + screenshots + route). Relinked hub + ownership.html Spec buttons to the PRD now that it exists.
+- Commits this continuation: `36943f2` (screenshots), `2a24c23` (Ownership PRD + symmetric links). All on PR #13, branch `claude/doc-complete-sections`.
+- Vault gotcha promoted: headless-Playwright-vs-Vercel-Deployment-Protection. Vault refs: [[LayerPulse-mockup]] project page + `2026-05-22-layerpulse-mockup-handover-bundle` session log.
+
+## Next session
+- Operator-side: review `/review/` hub, merge PR #13, accept the three screens into the LP backlog (Documents→P2 existing PRD; Glossary→new row; Ownership→P3 Governance).
