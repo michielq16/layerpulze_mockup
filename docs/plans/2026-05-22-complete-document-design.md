@@ -13,7 +13,9 @@
 ## Structure — three tiers
 
 ### Tier 1 — Cover scorecard (1 page)
-Fused: model identity (name · workspace · domain · purpose) · **certification stamp** · health score + 6 quality dimensions (mini-bars) · 4 headline KPIs · **Owner / SME / Stewards / Domain** · **completeness meter** (manual layer: owner ✓ · glossary N terms · processes ✓/✗) · last-scan + scope-and-method · a **source legend** (Automated = Fabric API · Manual = LayerPulse).
+Fused: model identity (name · workspace · domain · purpose) · **certification stamp** · a **KEEP / OPTIMIZE / RETIRE verdict band** (deterministic RAG over adoption/cost/quality/refresh — mirrors LP's T1.18 "Model Scorecard"; KEEP unless adoption is red → RETIRE, or any red / ≥2 amber → OPTIMIZE) · health score + 6 quality dimensions (mini-bars) · 4 headline KPIs · **Owner / SME / Stewards / Domain** · **completeness meter** (manual layer: owner ✓ · glossary N terms · processes ✓/✗) · last-scan + scope-and-method · a **source legend** (Automated = Fabric API · Manual = LayerPulse).
+
+> **Verdict band added 2026-05-24** to stay in sync with LP's T1.18 (the Perfect Document = Model Scorecard + Technical Reference). The Complete cover now leads with the same KEEP/OPTIMIZE/RETIRE action verdict.
 
 ### Tier 2 — Body (briefing depth, top-to-bottom)
 Grouped, each group introduced by a **group-lead banner** carrying a source chip (Automated / Manual / Derived):

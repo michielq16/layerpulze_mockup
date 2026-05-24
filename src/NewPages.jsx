@@ -1956,6 +1956,27 @@ function CompleteCover({ ctx }) {
     { k: `Glossary (${glossN})`, ok: glossN > 0 },
     { k: 'Processes', ok: procN > 0 },
   ];
+
+  // KEEP / OPTIMIZE / RETIRE verdict — deterministic RAG over 4 axes (matches LP T1.18 Model Scorecard).
+  const rag = (good, amber) => (good ? 'g' : amber ? 'a' : 'r');
+  const r90 = s.refresh.windows.find(w => /90d/.test(w.window)) || { ok: 1, runs: 1 };
+  const refreshOk = r90.ok / r90.runs;
+  const dormantPct = s.measureUsage.dormant / s.measureUsage.total;
+  const verdictAxes = [
+    { name: 'Adoption', rag: rag(s.adoption.mau >= 100 && dormantPct < 0.4, s.adoption.mau >= 30) },
+    { name: 'Cost',     rag: rag(s.cost.shareOfCapacityPct <= 20, s.cost.shareOfCapacityPct <= 40) },
+    { name: 'Quality',  rag: rag(q.score >= 8, q.score >= 6.5) },
+    { name: 'Refresh',  rag: rag(refreshOk >= 0.95, refreshOk >= 0.85) },
+  ];
+  const reds = verdictAxes.filter(a => a.rag === 'r').length;
+  const ambers = verdictAxes.filter(a => a.rag === 'a').length;
+  const verdict = verdictAxes[0].rag === 'r'
+    ? { label: 'RETIRE', tone: '#e11d48', why: 'Barely used — candidate to retire or consolidate.' }
+    : (reds > 0 || ambers >= 2)
+      ? { label: 'OPTIMIZE', tone: '#f59e0b', why: 'High value with fixable weak spots — optimize before it drifts.' }
+      : { label: 'KEEP', tone: '#16a34a', why: 'Heavily used, healthy, and earning its CU — keep as the canonical source.' };
+  const RAG_C = { g: '#16a34a', a: '#f59e0b', r: '#e11d48' };
+
   return (
     <div className="doc-cover">
       <div className="doc-cover-brand">
@@ -1976,6 +1997,19 @@ function CompleteCover({ ctx }) {
 
       <h1 className="doc-cover-title">{ctx.model}</h1>
       <div className="doc-cover-sub">{purpose}</div>
+
+      {/* KEEP / OPTIMIZE / RETIRE verdict band (LP T1.18 Model Scorecard) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 16, padding: '12px 16px', border: '1px solid #e5e8ec', borderLeft: '5px solid ' + verdict.tone, borderRadius: 10, background: '#f8fafc' }}>
+        <div style={{ fontSize: '14pt', fontWeight: 700, letterSpacing: '.04em', color: '#fff', background: verdict.tone, padding: '6px 16px', borderRadius: 8, whiteSpace: 'nowrap' }}>{verdict.label}</div>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', flex: 1 }}>
+          {verdictAxes.map(a => (
+            <span key={a.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '9.5pt', fontWeight: 600, color: '#334155' }}>
+              <span style={{ width: 9, height: 9, borderRadius: '50%', background: RAG_C[a.rag], display: 'inline-block' }}/>{a.name}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div style={{ fontSize: '9pt', color: '#64748b', marginTop: 6, fontStyle: 'italic' }}>Verdict: {verdict.why}</div>
 
       {/* Scorecard: health + dimensions */}
       <div style={{ display: 'flex', gap: 20, marginTop: 18, alignItems: 'stretch' }}>
