@@ -2090,7 +2090,7 @@ select.input::-ms-expand { display: none; }
   padding: 8px 0 4px;
   flex-wrap: wrap;
 }
-.ing-overall-grid .ing-cell { width: 22px; height: 22px; border-radius: 4px; }
+.ing-overall-grid .ing-cell { width: 20px; height: 20px; border-radius: 50%; }
 
 .ing-legend {
   display: flex; gap: 14px;
@@ -2101,7 +2101,7 @@ select.input::-ms-expand { display: none; }
 .ing-legend-item {
   display: inline-flex; align-items: center; gap: 6px;
 }
-.ing-legend-item .ing-cell { width: 10px; height: 10px; border-radius: 2px; }
+.ing-legend-item .ing-cell { width: 9px; height: 9px; border-radius: 50%; }
 
 /* Per-arm grid table */
 .ing-arms { display: flex; flex-direction: column; }
@@ -2121,7 +2121,7 @@ select.input::-ms-expand { display: none; }
 .ing-arms-row:last-child { border-bottom: 0; }
 .ing-arms-name { display: flex; align-items: center; gap: 9px; font-weight: 500; }
 .ing-arms-cells { display: flex; gap: 3px; flex-wrap: wrap; }
-.ing-arms-cells .ing-cell { width: 11px; height: 11px; border-radius: 2px; }
+.ing-arms-cells .ing-cell { width: 10px; height: 10px; border-radius: 50%; }
 .ing-arms-pct { font-size: 13px; font-weight: 600; }
 .ing-arms-meta { font-size: 11px; }
 
