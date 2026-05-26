@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>LayerPulse — Settings · Plain-language review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#0D3159;--sky:#2491eb;--gold:#FFBF3C;--ink:#1f2937;--muted:#64748b;--line:#e5e8ec;--bg:#f4f6f9;--card:#fff;}
+  *{box-sizing:border-box} html,body{margin:0;padding:0}
+  body{font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6;font-size:16px;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:900px;margin:0 auto;padding:0 22px 80px;} .mono{font-family:'JetBrains Mono',monospace;}
+  header.hero{background:linear-gradient(135deg,#0D3159 0%,#13447a 100%);color:#fff;padding:54px 0 46px;margin-bottom:38px;}
+  .hero .wrap{padding-bottom:0;}
+  .hero-mark{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:15px;margin-bottom:22px;opacity:.92;}
+  .hero-mark .dot{width:26px;height:26px;border-radius:7px;background:var(--gold);color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;}
+  .hero h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;letter-spacing:-.02em;}
+  .hero p{font-size:18px;margin:0;color:#cfe2f5;max-width:660px;}
+  .hero .meta{margin-top:20px;font-size:13px;color:#9cc2e8;display:flex;gap:18px;flex-wrap:wrap;} .hero .meta b{color:#fff;font-weight:600;}
+  .back{display:inline-block;margin-bottom:14px;color:#cfe2f5;text-decoration:none;font-size:14px;}
+  section{margin-bottom:42px;}
+  .eyebrow{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--sky);margin-bottom:8px;}
+  h2{font-size:25px;font-weight:700;letter-spacing:-.01em;margin:0 0 6px;color:var(--navy);}
+  .lead{font-size:17px;color:var(--muted);margin:0 0 22px;max-width:680px;} p{margin:0 0 14px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;box-shadow:0 1px 3px rgba(13,49,89,.04);}
+  .bigidea{border-left:5px solid var(--gold);} .bigidea p{font-size:17px;margin:0;} .bigidea p+p{margin-top:12px;}
+  .tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;} @media(max-width:680px){.tabs{grid-template-columns:1fr;}}
+  .tab{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;}
+  .tab.t1{border-top:4px solid var(--sky);} .tab.t2{border-top:4px solid #16a34a;} .tab.t3{border-top:4px solid #FFBF3C;}
+  .tab h3{margin:0 0 6px;font-size:17px;color:var(--navy);}
+  .tab ul{margin:8px 0 0;padding-left:18px;} .tab li{font-size:13.5px;margin-bottom:3px;}
+  .arms{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .arms table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  .arms th{background:var(--navy);color:#fff;text-align:left;padding:10px 13px;font-weight:600;font-size:12.5px;}
+  .arms td{padding:9px 13px;border-top:1px solid var(--line);vertical-align:top;}
+  .arms td:first-child{font-weight:700;color:var(--navy);white-space:nowrap;}
+  .arms .new{display:inline-block;font-size:10px;font-weight:700;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;margin-left:6px;letter-spacing:.05em;}
+  .arms .pre{display:inline-block;font-size:10px;font-weight:700;background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;margin-left:6px;letter-spacing:.05em;}
+  .dots{display:inline-flex;gap:3px;align-items:center;}
+  .dots span{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  .d-ok{background:#16a34a;} .d-amber{background:#f59e0b;} .d-fail{background:#dc2626;} .d-pending{background:#cbd5e1;}
+  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--sky);color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:9px 16px;border-radius:9px;}
+  .decisions{list-style:none;margin:0;padding:0;}
+  .decisions li{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:15px 18px;margin-bottom:11px;display:flex;gap:13px;align-items:flex-start;}
+  .decisions .q-num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:1px;}
+  .decisions .q-body b{display:block;font-size:15px;color:var(--navy);margin-bottom:2px;} .decisions .q-body span{font-size:14px;color:var(--muted);}
+  footer{border-top:1px solid var(--line);padding-top:24px;margin-top:10px;font-size:14px;color:var(--muted);} footer a{color:var(--sky);text-decoration:none;font-weight:600;}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <a class="back" href="./">← Review hub</a>
+    <div class="hero-mark"><span class="dot">LP</span> LayerPulse</div>
+    <h1>Settings — in plain language</h1>
+    <p>The admin's one page: <i>can we connect, are we collecting, what does it actually cost</i> — three tabs, one home.</p>
+    <div class="meta"><span>📄 <b>For:</b> Product owner review</span><span>⏱ <b>Read:</b> ~3 min</span></div>
+  </div>
+</header>
+<div class="wrap">
+
+  <section>
+    <div class="eyebrow">The one-sentence version</div>
+    <h2>One page, three admin jobs</h2>
+    <div class="card bigidea">
+      <p>Three different admin jobs share one user (the admin), so they share one page — split by tab so each has a clean home and the page doesn't become a wall.</p>
+      <p>The "planned ingestion axes" teaser came off (the roadmap belongs in the backlog, not here), the status visual switched from squares to dots (it's a 1-bit health signal, not a heatmap), and the cron-arms list was re-audited against the LayerPulse code so it actually matches what's running.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">The three tabs</div>
+    <h2>Connection · Ingestion · Pricing</h2>
+    <div class="tabs">
+      <div class="tab t1">
+        <h3>🔌 Connection</h3>
+        <p style="margin:6px 0 6px;font-size:13.5px;">Attach the tenant.</p>
+        <ul>
+          <li>Service principal (tenant + client + secret, encrypted at rest)</li>
+          <li>Capacity Metrics App (workspace + dataset IDs)</li>
+          <li>Connection status hero</li>
+          <li>Danger zone (delete environment — two-step)</li>
+        </ul>
+      </div>
+      <div class="tab t2">
+        <h3>♻️ Ingestion</h3>
+        <p style="margin:6px 0 6px;font-size:13.5px;">Operate the cron.</p>
+        <ul>
+          <li>Sync toggle · Schedule · Timezone</li>
+          <li>30-run overall completion (<span class="dots"><span class="d-ok"></span><span class="d-ok"></span><span class="d-amber"></span><span class="d-ok"></span></span>)</li>
+          <li>Per-arm health · 6 arms · last 30 runs</li>
+          <li>Sync now</li>
+        </ul>
+      </div>
+      <div class="tab t3">
+        <h3>💰 Pricing</h3>
+        <p style="margin:6px 0 6px;font-size:13.5px;">Money truth-of-record.</p>
+        <ul>
+          <li>Capacity €/mo per F-SKU</li>
+          <li>License €/user/mo per Microsoft plan (Free / Pro / PPU / E5 / SP)</li>
+          <li>Effective-date history</li>
+          <li>Powers share-of-bill math everywhere else</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">The cron arms — re-audited against the LayerPulse repo</div>
+    <h2>Six arms, honestly listed</h2>
+    <p class="lead">The mockup said "Five canonical arms." LayerPulse actually runs six. <b>Reports &amp; Apps</b> graduated from "planned" to "shipped" and was added; <b>Model introspection</b> runs as the prerequisite that the others fan out over; FUAM is deprecated and intentionally omitted.</p>
+    <div class="arms">
+      <table>
+        <tr><th>Arm</th><th>What it does</th><th>Status</th></tr>
+        <tr><td>Activity events</td><td>/admin/activityevents · 24×1h windows · 30d retention</td><td><span class="dots"><span class="d-ok"></span></span> active</td></tr>
+        <tr><td>Capacity Metrics App (DAX)</td><td>Direct DAX · capacity_snapshots / time_points / item_metrics_hourly</td><td><span class="dots"><span class="d-ok"></span></span> active</td></tr>
+        <tr><td>Refreshables</td><td>/admin/capacities/refreshables · per-dataset refresh history</td><td><span class="dots"><span class="d-ok"></span></span> active</td></tr>
+        <tr><td>Tenant settings</td><td>/v1/admin/tenantsettings · 200+ admin switches · latest-wins snapshots</td><td><span class="dots"><span class="d-ok"></span></span> active</td></tr>
+        <tr><td>Reports &amp; Apps <span class="new">NEW</span></td><td>/admin/groups/{ws}/reports + /admin/apps · sticky-cursor fan-out</td><td><span class="dots"><span class="d-ok"></span></span> active</td></tr>
+        <tr><td>Model introspection <span class="pre">PREREQ</span></td><td>Scanner getInfo + getDefinition · TMDL · runs first so the others have a workspace inventory to fan out over</td><td><span class="dots"><span class="d-ok"></span></span> active</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">What changed in V2</div>
+    <h2>Three deliberate edits</h2>
+    <div class="card">
+      <p><b>1. Squares → dots.</b> The 30-run completion grid + per-arm grids render circular dots now — matches the rest of the product's status vocabulary, removes the "mini-heatmap" misread.</p>
+      <p><b>2. Removed the "Planned ingestion axes" card.</b> Some entries were already shipped (Reports &amp; Apps); the card was drifting and the roadmap belongs in BACKLOG.md, not on the admin page.</p>
+      <p><b>3. Re-audited cron arms against the LayerPulse repo.</b> Six active arms instead of five (Reports &amp; Apps added; FUAM correctly omitted as deprecated). Each arm's meta line now matches the actual API path / code pattern.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">See it for real</div>
+    <h2>The live screen</h2>
+    <a class="btn" href="https://layerpulze-mockup.vercel.app/settings" target="_blank" rel="noreferrer">Open Settings →</a>
+    <p style="margin-top:12px;font-size:14px;color:var(--muted);">Open the <b>Ingestion</b> tab to see the dot grids and the audited 6-arm list. Connection has the SP form + Danger zone; Pricing carries the customer-entered €.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Over to you</div>
+    <h2>A few decisions for the build team</h2>
+    <ul class="decisions">
+      <li><span class="q-num">1</span><span class="q-body"><b>"Reconnect SP" from Ingestion when an arm fails on auth?</b><span>If an arm fails because the SP secret expired, surface a deep-link to Connection on the failing row. My lean: yes, contextual.</span></span></li>
+      <li><span class="q-num">2</span><span class="q-body"><b>Pricing history — past-row editing or append-only?</b><span>Effective-from with new revisions makes the historical cost math correct; editing past rows quietly rewrites history.</span></span></li>
+      <li><span class="q-num">3</span><span class="q-body"><b>Sync-now rate limit?</b><span>Per-env throttle (e.g. 1×/hour) so an impatient admin can't melt the cron with click-storms.</span></span></li>
+    </ul>
+  </section>
+
+  <footer>
+    <div>Detailed spec for the build team: <a href="https://github.com/michielq16/layerpulse_mockup/blob/main/docs/prds/settings.md" target="_blank" rel="noreferrer">PRD</a> · <a href="https://github.com/michielq16/layerpulse_mockup/blob/main/docs/screens/settings.md" target="_blank" rel="noreferrer">Screen narrative</a>. Back to the <a href="./">review hub</a>.</div>
+  </footer>
+</div>
+</body>
+</html>

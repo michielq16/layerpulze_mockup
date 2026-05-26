@@ -240,27 +240,18 @@ function RunGrid({ runs, label }) {
   );
 }
 
-// Five canonical LP collector arms — see Obsidian: docs/architecture/metrics-app-model.md,
-// runbooks/sp-onboarding.md, audits/collector-atomicity-audit-2026-05-11.md,
-// prd/{activity-events-atomic-ingestion,governance-pillar-section-b,settings-cron-controls}.md.
-// Run nightly via Promise.allSettled — failure-isolated per axis.
+// LP collector arms — verified 2026-05-26 against the source of truth in the
+// layerpulse repo: src/app/api/cron/collect/route.ts (Promise.allSettled @ route.ts:694).
+// FUAM omitted (deprecated; only runs when env.fuamEndpoint is set, which is no
+// longer recommended). Introspection runs as a prerequisite step before the
+// allSettled batch, populating the workspace inventory the others fan out over.
 const INGEST_ARMS = [
-  { key: 'activity',     name: 'Activity events',           meta: '/admin/activityevents · 24×1h · 1,284 events / 24h' },
-  { key: 'metrics',      name: 'Capacity Metrics App (DAX)', meta: 'MetricsByItemAndHour · 41 tables · 147 measures'   },
-  { key: 'refreshables', name: 'Refreshables',              meta: '/admin/capacities/refreshables · 47 datasets'      },
-  { key: 'tenant',       name: 'Tenant settings',           meta: '/v1/admin/tenantsettings · 160 settings'            },
-  { key: 'scanner',      name: 'Model introspection',       meta: 'admin/groups + admin/datasets + Scanner getInfo · Silver fidelity' },
-];
-
-// Planned ingestion axes — not collected yet. Ordered by BACKLOG.md sequencing (Tier-1 SP-only first,
-// then Q3 Graph-delegated, then Q4 SP-only). Each axis lights up its own product surface when it lands.
-const PLANNED_AXES = [
-  { key: 'reports',    seq: 1, name: 'Reports',            meta: 'GET /v1/admin/groups/{wsId}/reports · per-workspace fan-out · viewer activity + cost share-of-bill', tier: 'Tier 1 · T1.8', auth: 'SP-only',         surface: 'Reports & Apps pillar',         prd: 'reports-apps-pillar.md' },
-  { key: 'dataflows',  seq: 2, name: 'Dataflows',          meta: 'Admin API · Gen1 + Gen2 · lineage + refresh history',                                                   tier: 'Tier 1 · T1.9', auth: 'SP-only',         surface: 'Dataflow catalog',              prd: 'fabric-dataflows-axis.md' },
-  { key: 'items',      seq: 3, name: 'All Fabric items',   meta: '/admin/workspaces (drop 14d activity filter) · Lakehouses + Notebooks + Pipelines + Datamarts + …',     tier: 'Tier 1',         auth: 'SP-only',         surface: 'Artifact catalog',              prd: '../reports/2026-05-15-data-inventory-survey.md' },
-  { key: 'users-lic',  seq: 4, name: 'Users + licenses',   meta: 'Microsoft Graph · /users + /subscribedSkus + /reports/userActivity',                                     tier: 'Q3',             auth: 'Graph delegated', surface: 'Users page v2 (license cost)',  prd: 'users-page-pillar.md' },
-  { key: 'aad-groups', seq: 5, name: 'AAD groups',         meta: 'Microsoft Graph · /groups + /groups/{id}/members (transitive expansion)',                                 tier: 'Q3',             auth: 'Graph',           surface: 'E Governance · Sections C/D',  prd: 'microsoft-graph-integration.md' },
-  { key: 'apps',       seq: 6, name: 'Apps',               meta: 'Admin API · published apps · audience + engagement metrics',                                              tier: 'Q4',             auth: 'SP-only',         surface: 'App catalog',                   prd: 'reports-apps-pillar.md' },
+  { key: 'activity',     name: 'Activity events',            meta: '/admin/activityevents · 24×1h windows · 30d retention'                       },
+  { key: 'metrics',      name: 'Capacity Metrics App (DAX)', meta: 'Direct DAX · capacity_snapshots · time_points · item_metrics_hourly'         },
+  { key: 'refreshables', name: 'Refreshables',               meta: '/admin/capacities/refreshables · per-dataset refresh history'               },
+  { key: 'tenant',       name: 'Tenant settings',            meta: '/v1/admin/tenantsettings · 200+ admin switches · latest-wins snapshots'     },
+  { key: 'reports-apps', name: 'Reports & Apps',             meta: '/admin/groups/{ws}/reports + /admin/apps · sticky-cursor fan-out'           },
+  { key: 'scanner',      name: 'Model introspection',        meta: 'Scanner getInfo + getDefinition · TMDL · prerequisite step (runs first)'   },
 ];
 
 function IngestionTab() {
@@ -433,40 +424,6 @@ function IngestionTab() {
                 </div>
                 <div className="mono ing-arms-pct">{armPct}%</div>
                 <div className="mono muted ing-arms-meta">{a.meta}</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Planned axes — roadmap teaser, 6 axes ordered by BACKLOG.md sequencing */}
-      <div className="lp-card ing-planned">
-        <div className="lp-card-header">
-          <div>
-            <div className="lp-card-title">Planned ingestion axes <span className="count mono">{PLANNED_AXES.length}</span></div>
-            <div className="lp-card-sub">New data sources on the LP roadmap, ordered by sequencing. Each axis lights up its own product surface when it lands. PRDs linked.</div>
-          </div>
-          <span className="badge tone-violet-soft">QBR roadmap</span>
-        </div>
-        <div className="ing-planned-list">
-          {PLANNED_AXES.map(a => {
-            const tierTone = a.tier.startsWith('Tier 1') ? 'sky' : a.tier.startsWith('Q3') ? 'amber' : 'rose';
-            return (
-              <div key={a.key} className="ing-planned-row">
-                <div className="ing-planned-seq mono">{a.seq}</div>
-                <div className="ing-planned-main">
-                  <div className="ing-planned-name">
-                    <span className="ing-planned-dot"/>
-                    {a.name}
-                  </div>
-                  <div className="ing-planned-meta mono">{a.meta}</div>
-                  <div className="ing-planned-surface"><Icon name="zap" size={10}/> Unlocks: <b>{a.surface}</b></div>
-                </div>
-                <div className="ing-planned-tier">
-                  <span className={'badge tone-' + tierTone + '-soft'} style={{ fontSize: 10 }}>{a.tier}</span>
-                  <span className="badge badge-outline" style={{ fontSize: 9.5 }}>{a.auth}</span>
-                  <a href={`https://github.com/michielq16/layerpulse_mockup/blob/main/docs/prd/${a.prd}`} target="_blank" rel="noreferrer" className="ing-planned-prd mono">prd/{a.prd}</a>
-                </div>
               </div>
             );
           })}
