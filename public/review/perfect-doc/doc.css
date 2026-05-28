@@ -531,12 +531,16 @@ body {
   background: #fafbfc;
   border: 0.3mm solid var(--line-soft);
 }
-.callout::before { content: ''; background: var(--gold); }
-.callout.critical::before { background: var(--rose); }
-.callout.warn::before     { background: var(--amber); }
-.callout.info::before     { background: var(--sky); }
-.callout.success::before  { background: var(--emerald); }
-.callout > div { padding-left: 0; }
+/* Color the empty <div></div> spacer that the HTML already provides; do NOT
+   use ::before, because the pseudo-element would create a third grid item
+   and push the content div into a 1.2mm-wide column (causing single-word
+   wrap collapse). */
+.callout > div:first-child          { background: var(--gold);    min-height: 100%; }
+.callout.critical > div:first-child { background: var(--rose); }
+.callout.warn > div:first-child     { background: var(--amber); }
+.callout.info > div:first-child     { background: var(--sky); }
+.callout.success > div:first-child  { background: var(--emerald); }
+.callout > div:nth-child(2) { min-width: 0; padding-left: 0; }
 .callout .callout-l {
   font-family: var(--sans);
   font-weight: 700;
